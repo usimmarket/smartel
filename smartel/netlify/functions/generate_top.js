@@ -24,8 +24,8 @@ exports.handler = async (event) => {
     const form = JSON.parse(event.body || "{}");
 
     // 함수 파일 기준으로 pdf 폴더 접근
-    const templatePath = path.join(__dirname, "../../pdf/template_smartel.pdf");
-    const mapPath = path.join(__dirname, "../../pdf/map_smartel.json");
+    const templatePath = path.join(__dirname, "pdf/template_smartel.pdf");
+    const mapPath = path.join(__dirname, "pdf/map_smartel.json");
 
     // 파일 존재 검사
     if (!fs.existsSync(templatePath)) {
