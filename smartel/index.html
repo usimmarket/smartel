@@ -1356,6 +1356,165 @@ document.addEventListener('DOMContentLoaded', function(){
   if (saveBtn && !saveBtn.__bound2){ saveBtn.addEventListener('click', onSavePdf); saveBtn.__bound2 = true; }
   if (printBtn && !printBtn.__bound2){ printBtn.addEventListener('click', onOpenPdf); printBtn.__bound2 = true; }
 })();
+</script> 
+<!-- smartel: hard-override Save/Print & required validation (no UI/translation changes) -->
+<script>
+(function () {
+  // ========== 공통 유틸 ==========
+  function basePath(){ return location.pathname.replace(/[^\/]+$/, ''); }
+  var PDF_URL = basePath() + 'pdf/template_smartel.pdf';
+  var MAP_URL = basePath() + 'pdf/map_smartel.json';
+
+  function getBtnByIdOrText(id, rx){
+    var b = document.getElementById(id);
+    if (b) return b;
+    var all = document.querySelectorAll('button, a');
+    for (var i=0;i<all.length;i++){
+      var t = (all[i].textContent||'').trim();
+      if (rx.test(t)) return all[i];
+    }
+    return null;
+  }
+
+  // 기존 리스너가 붙어있어도 싹 비우기 위해 노드를 "클론으로 교체"
+  function stripListeners(btn){
+    if (!btn) return null;
+    var clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    return clone;
+  }
+
+  // 이미 구현된 채움로직이 있으면 우선 사용
+  async function getFilledPdfBlob(){
+    if (typeof window.getFilledPdf === 'function'){
+      try { return await window.getFilledPdf(PDF_URL, MAP_URL); } catch(e){ console.warn(e); }
+    }
+    return null;
+  }
+
+  // ========== 필수값 검증 (UI는 기존 스타일 활용) ==========
+  var form = document.getElementById('form') || document.querySelector('form');
+  // 이름이 다를 수 있어 넓게 커버
+  var REQUIRED_LIST = [
+    'subscriber','subscriber_name','subscriberPhone','subscriber_phone',
+    'birth','pay_birth','autopay_holder','autopay_number','sim2','usim_serial'
+  ];
+  function isEmpty(el){
+    if (!el) return true;
+    var v = (el.value||'').trim();
+    if (el.type==='radio' || el.type==='checkbox'){
+      var group = (form||document).querySelectorAll('input[name="'+el.name+'"]');
+      return !Array.prototype.some.call(group, function(i){ return i.checked; });
+    }
+    return v==='';
+  }
+  function ensureError(el, msg){
+    var wrap = el.closest('.form-group') || el.parentElement || el;
+    var fb = wrap.querySelector('.invalid-feedback[data-for="'+(el.name||el.id||'')+'"]');
+    if (!fb){
+      fb = document.createElement('div');
+      fb.className = 'invalid-feedback';
+      fb.setAttribute('data-for', el.name||el.id||'');
+      wrap.appendChild(fb);
+    }
+    fb.textContent = msg || '필수 입력 항목입니다.';
+    el.classList && el.classList.add('is-invalid');
+  }
+  function clearError(el){
+    el.classList && el.classList.remove('is-invalid');
+    var wrap = el.closest('.form-group') || el.parentElement || el;
+    var fb = wrap && wrap.querySelector('.invalid-feedback[data-for="'+(el.name||el.id||'')+'"]');
+    if (fb) fb.remove();
+  }
+  function validateRequired(){
+    if (!form) return true;
+    var lang  = (document.documentElement.getAttribute('lang')||'KR').toUpperCase();
+    var dict  = (window.I18N && (I18N[lang]||I18N.KR)) || {};
+    var first = null;
+
+    var inputs = form.querySelectorAll('input,select,textarea');
+    Array.prototype.forEach.call(inputs, function(el){
+      var name = el.name || el.id || '';
+      var marked = el.required || el.dataset.required==='true' || REQUIRED_LIST.indexOf(name)>=0;
+      if (!marked){ clearError(el); return; }
+      if (isEmpty(el)){
+        var msg = el.dataset.error ||
+                  dict.caps_warn ||
+                  '필수 입력 항목입니다.';
+        ensureError(el, msg);
+        if (!first) first = el;
+      }else{
+        clearError(el);
+      }
+    });
+
+    if (first){
+      try { first.focus({preventScroll:true}); } catch(_){}
+      try { first.scrollIntoView({behavior:'smooth', block:'center'}); } catch(_){}
+      return false;
+    }
+    return true;
+  }
+  if (form){
+    form.addEventListener('input',  function(e){ clearError(e.target); }, true);
+    form.addEventListener('change', function(e){ clearError(e.target); }, true);
+  }
+
+  // ========== 저장(다운로드) / 열기(인쇄대화상자 X) ==========
+  async function onSavePdf(e){
+    e && e.preventDefault();
+    if (!validateRequired()) return;
+    try{
+      var blob = await getFilledPdfBlob();
+      if (blob){
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'smartel.pdf';
+        document.body.appendChild(a); a.click();
+        setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 700);
+      }else{
+        var a2 = document.createElement('a');
+        a2.href = PDF_URL; a2.download = 'smartel.pdf';
+        document.body.appendChild(a2); a2.click(); a2.remove();
+      }
+    }catch(err){
+      alert('PDF 저장 중 오류가 발생했습니다.'); console.error(err);
+    }
+  }
+
+  async function onOpenPdf(e){
+    e && e.preventDefault();
+    if (!validateRequired()) return;
+    try{
+      var w = window.open('about:blank');
+      if (!w){ alert('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+      var blob = await getFilledPdfBlob();
+      if (blob){
+        var url = URL.createObjectURL(blob);
+        w.location = url; // 인쇄 대화상자 호출 안 함
+      }else{
+        w.location = PDF_URL; // 템플릿이라도 열기
+      }
+    }catch(err){
+      alert('PDF 열기 중 오류가 발생했습니다.'); console.error(err);
+    }
+  }
+
+  // ========== 버튼 교체(이전 리스너 제거) + 바인딩 ==========
+  var saveBtn  = getBtnByIdOrText('savePdfBtn', /PDF\s*저장|Save\s*PDF/i);
+  var printBtn = getBtnByIdOrText('printBtn',   /인쇄|Print/i);
+
+  if (saveBtn){
+    saveBtn = stripListeners(saveBtn); // <- 기존 onClick / addEventListener 제거
+    saveBtn.type = 'button';
+    if (!saveBtn.__smartelBound){ saveBtn.addEventListener('click', onSavePdf); saveBtn.__smartelBound = true; }
+  }
+  if (printBtn){
+    printBtn = stripListeners(printBtn);
+    printBtn.type = 'button';
+    if (!printBtn.__smartelBound){ printBtn.addEventListener('click', onOpenPdf); printBtn.__smartelBound = true; }
+  }
+})();
 </script>  
 </body>
 </html>
