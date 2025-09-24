@@ -1515,6 +1515,167 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!printBtn.__smartelBound){ printBtn.addEventListener('click', onOpenPdf); printBtn.__smartelBound = true; }
   }
 })();
+</script> 
+<!-- smartel: Save/Print/Validation hard override (UI/translation untouched) -->
+<script>
+(function () {
+  // === 경로 ===
+  function basePath(){ return location.pathname.replace(/[^\/]+$/, ''); }
+  const PDF_URL = basePath() + 'pdf/template_smartel.pdf';
+  const MAP_URL = basePath() + 'pdf/map_smartel.json';
+
+  // === 버튼 찾기 & 기존 리스너 제거(클론교체) ===
+  function findBtn(id, rx){
+    let b = document.getElementById(id);
+    if (b) return b;
+    return Array.from(document.querySelectorAll('button,a'))
+      .find(el => rx.test((el.textContent||'').trim()));
+  }
+  function stripListeners(btn){
+    if (!btn) return null;
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    return clone;
+  }
+
+  // === 채워진 PDF가 이미 구현돼 있다면 우선 사용 ===
+  async function getFilledPdfBlob(){
+    if (typeof window.getFilledPdf === 'function'){
+      try { return await window.getFilledPdf(PDF_URL, MAP_URL); }
+      catch(e){ console.warn(e); }
+    }
+    return null;
+  }
+
+  // === 검증: ‘가입자 번호’(subscriber_phone), ‘희망번호(4자리)’(wish4)만 제외하고 모두 필수 ===
+  const EXCEPT = new Set([
+    'subscriber_phone','subscriberPhone', // 가입자 번호
+    'wish4','wish_last4','preferred_last4' // 희망번호(4자리)
+  ]);
+  function isRequired(el){
+    const nm = el.name || el.id || '';
+    if (!nm) return false;
+    if (EXCEPT.has(nm)) return false;
+    if (el.type==='hidden' || el.disabled) return false;
+    return true;
+  }
+  function showErr(el, msg){
+    el.classList.add('is-invalid');
+    const wrap = el.closest('.form-group') || el.parentElement || el;
+    let hint = wrap.querySelector('.smartel-err');
+    if (!hint){
+      hint = document.createElement('div');
+      hint.className = 'smartel-err';
+      hint.style.color = '#dc3545';     // 붉은색
+      hint.style.fontSize = '0.875rem'; // 작은 텍스트
+      hint.style.marginTop = '4px';
+      wrap.appendChild(hint);
+    }
+    hint.textContent = msg || '필수 입력 항목입니다.';
+  }
+  function clearErr(el){
+    el.classList.remove('is-invalid');
+    const wrap = el.closest('.form-group') || el.parentElement || el;
+    const hint = wrap && wrap.querySelector('.smartel-err');
+    if (hint) hint.remove();
+  }
+  function validateAll(){
+    const form = document.getElementById('form') || document.querySelector('form');
+    if (!form) return true;
+    let first = null;
+    const seenRadio = new Set();
+    const fields = Array.from(form.querySelectorAll('input,select,textarea')).filter(el=>{
+      if (el.type==='radio'){
+        if (seenRadio.has(el.name)) return false;
+        seenRadio.add(el.name);
+      }
+      return isRequired(el);
+    });
+    fields.forEach(el=>{
+      let empty = false;
+      if (el.type==='radio'){
+        empty = !Array.from(form.querySelectorAll('input[name="'+CSS.escape(el.name)+'"]')).some(r=>r.checked);
+      } else {
+        empty = ((el.value||'').trim()==='');
+      }
+      if (empty){
+        showErr(el, '필수 입력 항목입니다.');
+        if (!first) first = el;
+      } else {
+        clearErr(el);
+      }
+    });
+    if (first){
+      try{ first.focus({preventScroll:true}); }catch(_){}
+      try{ first.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){}
+      return false;
+    }
+    return true;
+  }
+  document.addEventListener('input',  e=> clearErr(e.target), true);
+  document.addEventListener('change', e=> clearErr(e.target), true);
+
+  // === 저장 (다운로드) ===
+  async function onSave(e){
+    e && e.preventDefault();
+    if (!validateAll()) return;
+    try{
+      const blob = await getFilledPdfBlob();
+      if (blob){
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel.pdf';
+        document.body.appendChild(a); a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 600);
+      }else{
+        const a = document.createElement('a');
+        a.href = PDF_URL; a.download = 'smartel.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+    }catch(err){
+      alert('PDF 저장 중 오류가 발생했습니다.');
+      console.error(err);
+    }
+  }
+
+  // === 인쇄 버튼: 인쇄 대화상자 없이 PDF 새 탭만 열기 ===
+  async function onOpenPdf(e){
+    e && e.preventDefault();
+    if (!validateAll()) return;
+    try{
+      // 클릭 즉시 팝업 열어 차단 회피
+      const w = window.open('about:blank');
+      if (!w){ alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.'); return; }
+      let url = PDF_URL;
+      const blob = await getFilledPdfBlob();
+      if (blob) url = URL.createObjectURL(blob);
+      // 새 탭에 PDF만 로드 (print() 호출 안 함)
+      w.location = url;
+    }catch(err){
+      alert('PDF 열기 중 오류가 발생했습니다.');
+      console.error(err);
+    }
+  }
+
+  // === 버튼 연결: 기존 리스너 제거 후 강제 바인딩 ===
+  function bind(){
+    let saveBtn  = findBtn('savePdfBtn', /PDF\s*저장|Save\s*PDF/i);
+    let printBtn = findBtn('printBtn',   /인쇄|Print/i);
+
+    if (saveBtn){
+      saveBtn = stripListeners(saveBtn);
+      saveBtn.type = 'button';
+      saveBtn.addEventListener('click', onSave);
+    }
+    if (printBtn){
+      printBtn = stripListeners(printBtn);
+      printBtn.type = 'button';
+      printBtn.addEventListener('click', onOpenPdf);
+    }
+  }
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
 </script>  
 </body>
 </html>
