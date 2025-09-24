@@ -1235,6 +1235,126 @@ document.addEventListener('DOMContentLoaded', function(){
   hook(saveBtn);
   hook(printBtn);
 })();
-</script>  
+</script> 
+<script>
+(function () {
+  // 1) Netlify Functions 경로 (로컬 file:// 로 열었을 때도 동작하도록 절대경로 폴백)
+  const FN_REL = '/.netlify/functions/generate_top';
+  const FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_top';
+  const fnUrl = () => (location.protocol.startsWith('http') ? FN_REL : FN_ABS);
+
+  // 2) 신청일자 자동 채우기
+  (function fillApplyDate(){
+    const pad = n => String(n).padStart(2,'0');
+    const d = new Date();
+    const el = document.getElementById('apply_date');
+    if (el) el.value = `신청일자 ${d.getFullYear()}년 ${d.getMonth()+1}월 ${pad(d.getDate())}일`;
+  })();
+
+  // 3) 자동이체 '카드' 부가 필드 토글
+  function updateCardFields(){
+    const sel = document.querySelector('input[name="autopay_method"]:checked');
+    const box = document.getElementById('card_fields');
+    if (box && sel) box.style.display = (sel.value === 'card') ? 'block' : 'none';
+  }
+  document.querySelectorAll('input[name="autopay_method"]').forEach(r=>{
+    r.addEventListener('change', updateCardFields);
+  });
+  updateCardFields(); // 초기 1회 보정
+
+  // 4) PDF 생성 공통 루틴
+  function setHiddenValues(){
+    // 생년월일 숨김 값 동기화
+    const birthIn = document.getElementById('birth_in');
+    const birth = document.getElementById('birth');
+    if (birthIn && birth) birth.value = birthIn.value.replace(/\D/g,'');
+
+    // 카드 유효기간 YY/MM 합치기
+    if (document.querySelector('input[name="autopay_method"]:checked')?.value === 'card') {
+      const yy = (document.getElementById('card_exp_year')?.value||'').trim();
+      const mm = (document.getElementById('card_exp_month')?.value||'').trim();
+      if (yy && mm) (document.getElementById('autopay_exp')||{}).value = `${yy}/${mm}`;
+    }
+  }
+
+  async function generatePDFBlob() {
+    const form = document.getElementById('form');
+    if (!form) throw new Error('FORM_NOT_FOUND');
+    // 기존 validate()가 있으면 그대로 사용 (불통과 시 상단 안내)
+    if (typeof validate === 'function' && !validate()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      throw new Error('VALIDATION');
+    }
+    const data = Object.fromEntries(new FormData(form).entries());
+    const resp = await fetch(fnUrl(), {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    if (!resp.ok) {
+      const msg = await resp.text().catch(()=> '');
+      throw new Error(`FN_FAIL_${resp.status} ${msg}`);
+    }
+    return await resp.blob();
+  }
+
+  // 5) 버튼 바인딩(기존 id 유지, 없으면 라벨 텍스트로도 탐색)
+  function byIdOrText(id, texts){
+    return document.getElementById(id) ||
+           Array.from(document.querySelectorAll('button,a,[role="button"]'))
+                .find(b => texts.some(t => b.textContent.trim() === t));
+  }
+
+  function bind(id, texts, handler){
+    const btn = byIdOrText(id, texts);
+    if (!btn) return;
+    btn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      try {
+        setHiddenValues();
+        const blob = await generatePDFBlob();
+        await handler(blob);
+      } catch (err) {
+        if (String(err).includes('VALIDATION')) return;
+        alert('PDF 생성 중 오류가 발생했습니다. Netlify Functions 배포/경로를 확인해주세요.');
+        console.error(err);
+      }
+    });
+  }
+
+  // 저장: 새 탭으로 PDF만 띄움
+  bind('saveBtn', ['PDF 저장','Save PDF'], async (blob)=>{
+    const url = URL.createObjectURL(blob);
+    window.open(url,'_blank','noopener');
+    setTimeout(()=>URL.revokeObjectURL(url), 600000);
+  });
+
+  // 인쇄: 인쇄 대화상자만 띄우고 웹페이지 인쇄는 막음
+  bind('printBtn', ['인쇄','Print'], async (blob)=>{
+    const url = URL.createObjectURL(blob);
+    const w = window.open('', '_blank');
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title>
+      <style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
+    </head><body>
+      <iframe id="pv" src="${url}"></iframe>
+      <script>
+        const f = document.getElementById('pv');
+        f.addEventListener('load', () => {
+          try { f.contentWindow.focus(); f.contentWindow.print(); }
+          catch(e){ window.focus(); window.print(); }
+        });
+        window.addEventListener('afterprint', () => setTimeout(()=>window.close(), 400));
+      <\/script>
+    </body></html>`);
+    w.document.close();
+    setTimeout(()=>URL.revokeObjectURL(url), 600000);
+  });
+
+  // 초기화는 그대로
+  const resetBtn = byIdOrText('resetBtn', ['초기화','Reset']);
+  if (resetBtn) resetBtn.addEventListener('click', ()=> document.getElementById('form')?.reset());
+})();
+</script>
+  
 </body>
 </html>
