@@ -1,0 +1,4 @@
+[build]
+  base = "smartel"
+  publish = "smartel"
+  functions = "smartel/netlify/functions"
