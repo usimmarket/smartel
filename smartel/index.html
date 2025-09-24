@@ -1132,5 +1132,90 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 })();
 </script>
+<!-- PDF save/print fix: drop-in patch -->
+<script>
+(function () {
+  // 버튼이 form 안에 있어도 submit 되지 않도록 방지
+  var saveBtn = document.getElementById('savePdfBtn');
+  var printBtn = document.getElementById('printBtn');
+  if (saveBtn) saveBtn.type = 'button';
+  if (printBtn) printBtn.type = 'button';
+
+  // 현재 경로 기준으로 템플릿/맵 절대경로 생성 (Netlify에서도 안전)
+  function basePath() {
+    // /smartel/index.html -> /smartel/
+    return location.pathname.replace(/[^\/]+$/, '');
+  }
+  var PDF_URL = basePath() + 'pdf/template_smartel.pdf';
+  var MAP_URL = basePath() + 'pdf/map_smartel.json';
+
+  // 이미 구현돼 있을 수도 있는 채움 로직을 존중: window.getFilledPdf()가 있으면 우선 사용
+  async function getPdfBlobIfAvailable() {
+    if (typeof window.getFilledPdf === 'function') {
+      try { return await window.getFilledPdf(PDF_URL, MAP_URL); } catch (e) { console.warn(e); }
+    }
+    return null;
+  }
+
+  async function onSavePdf(e) {
+    e && e.preventDefault();
+    try {
+      var blob = await getPdfBlobIfAvailable();
+      if (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'smartel.pdf';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+        return;
+      }
+      // 채움 블롭이 없으면 템플릿 그대로라도 저장
+      var a2 = document.createElement('a');
+      a2.href = PDF_URL;
+      a2.download = 'smartel.pdf';
+      document.body.appendChild(a2);
+      a2.click();
+      a2.remove();
+    } catch (err) {
+      alert('PDF 저장 중 오류가 발생했습니다.');
+      console.error(err);
+    }
+  }
+
+  async function onPrintPdf(e) {
+    e && e.preventDefault();
+    try {
+      var blob = await getPdfBlobIfAvailable();
+      // 새 탭/팝업을 미리 열어 팝업 차단 회피
+      var w = window.open('about:blank');
+      if (!w) { alert('팝업이 차단되었습니다. 사이트 팝업을 허용해 주세요.'); return; }
+
+      if (blob) {
+        var url = URL.createObjectURL(blob);
+        w.location = url;
+        // 일부 브라우저는 로드 후 지연 호출 필요
+        setTimeout(function(){ try { w.focus(); w.print(); } catch(_){} }, 800);
+      } else {
+        // 채움이 없으면 템플릿이라도 열고 인쇄
+        w.location = PDF_URL;
+        setTimeout(function(){ try { w.focus(); w.print(); } catch(_){} }, 800);
+      }
+    } catch (err) {
+      alert('PDF 인쇄 중 오류가 발생했습니다.');
+      console.error(err);
+    }
+  }
+
+  if (saveBtn && !saveBtn.__bound) {
+    saveBtn.addEventListener('click', onSavePdf);
+    saveBtn.__bound = true;
+  }
+  if (printBtn && !printBtn.__bound) {
+    printBtn.addEventListener('click', onPrintPdf);
+    printBtn.__bound = true;
+  }
+})();
+</script>  
 </body>
 </html>
