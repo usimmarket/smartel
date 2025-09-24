@@ -1,5 +1,14 @@
 [build]
-  base = "smartel"              # 레포 기준
-  publish = "."                 # Base(smartel) 자체를 퍼블리시
-  functions = "netlify/functions"  # Base 기준 경로
+  base = "smartel"
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# 이 줄이 중요: 함수 번들에 PDF/JSON 포함
+[[functions]]
+  directory = "netlify/functions"
+  included_files = ["smartel/pdf/**"]
+
 
