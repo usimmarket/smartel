@@ -1132,5 +1132,189 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 })();
 </script>
+<!-- smartel: required messages & fee field exclusion (UI/translation untouched) -->
+<script>
+(function () {
+  var form = document.getElementById('form') || document.querySelector('form');
+  if (!form) return;
+
+  // =========================
+  // 1) "선택한 요금제 월요금"은 자동 입력이므로 필수 제외
+  //    + 모든 readonly 필드도 필수 제외(자동입력/계산값 보호)
+  // =========================
+  // 이름이 상황별로 다를 수 있어 여러 후보를 한꺼번에 제외
+  var EXCEPT_NAMES = new Set([
+    'selectedPlanFee','plan_fee','planPrice','plan_price','selected_plan_fee',
+    'subscriber_phone','subscriberPhone',     // 가입자 번호(요청에 따라 필수 제외)
+    'wish4','wish_last4','preferred_last4'   // 희망번호(4자리) 필수 제외
+  ]);
+
+  function isRequired(el){
+    var nm = el.name || el.id || '';
+    if (!nm) return false;
+    if (el.readOnly) return false;         // 자동입력/계산칸은 필수 제외
+    if (EXCEPT_NAMES.has(nm)) return false;
+    if (el.type === 'hidden' || el.disabled) return false;
+    // 체크박스/라디오 등은 하나만 판정(아래 validate에서 그룹으로 확인)
+    return true;
+  }
+
+  // =========================
+  // 2) 항목별 맞춤 에러 메시지 (THE ONE 스타일)
+  //    - 가능한 다양한 name/id 별칭을 커버
+  //    - 한국어 고정 문구 (요청사항 그대로)
+  // =========================
+  var MSG = {
+    plan:            '요금제를 선택해 주세요.',
+    subscriber:      '가입자명을 입력하세요.',
+    birth:           '생년월일을 6자리(YYMMDD) 또는 8자리(YYYYMMDD)로 입력.',
+    addr:            '주소를 입력하세요.',
+    sim2:            'USIM 일련번호를 기재해주세요.',
+    autopay_holder:  '예금주/카드주 입력.',
+    pay_birth:       '생년월일 6자리(YYMMDD) 또는 8자리(YYYYMMDD) 입력.',
+    autopay_org:     '은행명/카드사 입력.',
+    autopay_number:  '번호를 정확히 입력.'
+  };
+
+  // name/id → 메시지 키 맵핑(여러 별칭 지원)
+  var NAME_TO_KEY = {
+    plan:               'plan',
+    plan_select:        'plan',
+    rate_plan:          'plan',
+    tariff:             'plan',
+
+    subscriber:         'subscriber',
+    subscriber_name:    'subscriber',
+    applicant:          'subscriber',
+
+    birth:              'birth',
+    birthdate:          'birth',
+    pay_birth:           'pay_birth',
+
+    addr:               'addr',
+    address:            'addr',
+    street:             'addr',
+
+    sim2:               'sim2',
+    usim_serial:        'sim2',
+    usim_number:        'sim2',
+
+    autopay_holder:     'autopay_holder',
+    account_holder:     'autopay_holder',
+    card_holder:        'autopay_holder',
+
+    autopay_org:        'autopay_org',
+    bank:               'autopay_org',
+    card_company:       'autopay_org',
+
+    autopay_number:     'autopay_number',
+    account_number:     'autopay_number',
+    card_number:        'autopay_number'
+  };
+
+  // 그룹 라디오와 일반 입력의 오류 표기/해제
+  function showErr(el, msg){
+    el.classList.add('is-invalid');
+    // 메시지는 입력 바로 아래 붉은 안내문으로
+    var wrap = el.closest('.form-group') || el.parentElement || el;
+    var hint = wrap.querySelector('.smartel-err');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.className = 'smartel-err';
+      hint.style.color = '#dc3545';
+      hint.style.fontSize = '0.875rem';
+      hint.style.marginTop = '4px';
+      wrap.appendChild(hint);
+    }
+    hint.textContent = msg || '필수 입력 항목입니다.';
+  }
+  function clearErr(el){
+    el.classList && el.classList.remove('is-invalid');
+    var wrap = el.closest('.form-group') || el.parentElement || el;
+    var hint = wrap && wrap.querySelector('.smartel-err');
+    if (hint) hint.remove();
+  }
+
+  // 입력/변경 시 즉시 오류 해제
+  document.addEventListener('input',  function(e){ clearErr(e.target); }, true);
+  document.addEventListener('change', function(e){ clearErr(e.target); }, true);
+
+  // =========================
+  // 3) 검증 함수: 버튼 동작(저장/열기) 전에 호출
+  // =========================
+  window.__smartelValidate = function(){
+    var first = null;
+    var seenRadio = new Set();
+
+    var fields = Array.prototype.slice.call(
+      form.querySelectorAll('input,select,textarea')
+    ).filter(function(el){
+      // 라디오 그룹 중복 제외
+      if (el.type === 'radio'){
+        if (seenRadio.has(el.name)) return false;
+        seenRadio.add(el.name);
+      }
+      return isRequired(el);
+    });
+
+    fields.forEach(function(el){
+      var empty = false;
+      if (el.type === 'radio'){
+        empty = !Array.prototype.some.call(
+          form.querySelectorAll('input[name="'+ CSS.escape(el.name) +'"]'),
+          function(r){ return r.checked; }
+        );
+      } else {
+        empty = ((el.value || '').trim() === '');
+      }
+
+      if (empty){
+        // 메시지 선택: name/id → 키
+        var nm = el.name || el.id || '';
+        var key = NAME_TO_KEY[nm];
+        var msg = key && MSG[key] ? MSG[key] : '필수 입력 항목입니다.';
+        showErr(el, msg);
+        if (!first) first = el;
+      } else {
+        clearErr(el);
+      }
+    });
+
+    if (first){
+      try { first.focus({preventScroll:true}); } catch(_){}
+      try { first.scrollIntoView({behavior:'smooth', block:'center'}); } catch(_){}
+      return false;
+    }
+    return true;
+  };
+
+  // 이미 연결된 저장/인쇄 핸들러가 있더라도 검증만 선행하도록 보강
+  function hook(btn){
+    if (!btn || btn.__smartelGuarded) return;
+    var handler = function(ev){
+      // 검증 실패 시 이후 모든 기본 동작 중단
+      if (!window.__smartelValidate()){
+        ev && ev.preventDefault && ev.preventDefault();
+        ev && ev.stopImmediatePropagation && ev.stopImmediatePropagation();
+        return false;
+      }
+      // 통과 시 기존 리스너(저장/열기/인쇄)는 그대로 실행
+    };
+    btn.addEventListener('click', handler, true); // 캡처 단계에서 먼저 개입
+    btn.__smartelGuarded = true;
+  }
+
+  // 저장/인쇄 버튼 찾아 검증 가드만 입히기
+  var saveBtn  = document.getElementById('savePdfBtn') ||
+                 Array.from(document.querySelectorAll('button,a'))
+                      .find(function(b){ return /PDF\s*저장|Save\s*PDF/i.test((b.textContent||'').trim()); });
+  var printBtn = document.getElementById('printBtn') ||
+                 Array.from(document.querySelectorAll('button,a'))
+                      .find(function(b){ return /인쇄|Print/i.test((b.textContent||'').trim()); });
+
+  hook(saveBtn);
+  hook(printBtn);
+})();
+</script>  
 </body>
 </html>
