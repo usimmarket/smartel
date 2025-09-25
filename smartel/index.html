@@ -358,11 +358,17 @@ header .centered img.logo{ height: 46px !important; }
 
 </main>
 <script>
-  /* === Netlify Functions 엔드포인트 === */
-  function fnUrl() {
-    // 현재 배포 중인 도메인의 Functions로 고정 (외부 도메인/프로토콜 분기 제거)
-    return `${window.location.origin}/.netlify/functions/generate_top`;
+  // --- Netlify Functions 엔드포인트 결정 (한 곳만 존재해야 함) ---
+  function fnUrl(){
+    const REL = '/.netlify/functions/generate_top';
+    // 배포 사이트에서 열렸다면 동일 오리진으로 호출 (CORS/쿠키 안전)
+    if (location.origin.includes('smartel.netlify.app')) {
+      return REL;
+    }
+    // 그 외(file://, GitHub preview 등)에서는 절대 URL 사용
+    return 'https://smartel.netlify.app' + REL;
   }
+</script>
 
   /* === 서버에 PDF 생성 요청 === */
   async function generatePDFBlob() {
