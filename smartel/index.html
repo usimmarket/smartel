@@ -358,91 +358,116 @@ header .centered img.logo{ height: 46px !important; }
 
 </main>
 <script>
-  // --- Netlify Functions 엔드포인트 결정 (한 곳만 존재해야 함) ---
-  function fnUrl(){
-    const REL = '/.netlify/functions/generate_top';
-    // 배포 사이트에서 열렸다면 동일 오리진으로 호출 (CORS/쿠키 안전)
-    if (location.origin.includes('smartel.netlify.app')) {
-      return REL;
-    }
-    // 그 외(file://, GitHub preview 등)에서는 절대 URL 사용
-    return 'https://smartel.netlify.app' + REL;
-  }
-</script>
+/* === Netlify Functions 엔드포인트 === */
+function fnUrl () {
+  // 현재 배포 중인 도메인 기준으로 고정
+  return `${window.location.origin}/.netlify/functions/generate_top`;
+}
 
-  /* === 서버에 PDF 생성 요청 === */
-  async function generatePDFBlob() {
-    const form = document.getElementById('form');
-    const data = Object.fromEntries(new FormData(form).entries());
-    const res = await fetch(fnUrl(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const msg = await res.text().catch(() => '');
-      throw new Error(`PDF 생성 실패 (${res.status}) ${msg}`);
-    }
-    return await res.blob(); // application/pdf
-  }
+/* === 당일 신청일자 자동 입력 (필드가 있으면만) === */
+function formatApplyDate(d){
+  const y=d.getFullYear(), m=d.getMonth()+1, dd=String(d.getDate()).padStart(2,'0');
+  return `신청일자 ${y}년 ${m}월 ${dd}일`;
+}
 
-  /* === 저장(다운로드) === */
-  async function onSavePDF() {
-    setHiddenBirth();
-    if (document.querySelector('input[name="autopay_method"]:checked').value === 'card') {
-      const yy = (document.getElementById('card_exp_year')?.value || '').trim();
-      const mm = (document.getElementById('card_exp_month')?.value || '').trim();
-      if (yy && mm) document.getElementById('autopay_exp').value = `${yy}/${mm}`;
-    }
-    if (!validate()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-
-    try {
-      const blob = await generatePDFBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'smartel.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e) {
-      alert(e.message || 'PDF 저장 중 오류가 발생했습니다.');
-      console.error(e);
-    }
-  }
-
-  /* === 인쇄(뷰어만 열기; 시스템 인쇄창 자동 호출 없음) === */
-  async function onPrintPDF() {
-    setHiddenBirth();
-    if (document.querySelector('input[name="autopay_method"]:checked').value === 'card') {
-      const yy = (document.getElementById('card_exp_year')?.value || '').trim();
-      const mm = (document.getElementById('card_exp_month')?.value || '').trim();
-      if (yy && mm) document.getElementById('autopay_exp').value = `${yy}/${mm}`;
-    }
-    if (!validate()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-
-    try {
-      const blob = await generatePDFBlob();
-      const url = URL.createObjectURL(blob);
-      // 브라우저 PDF 뷰어 탭만 열기
-      window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e) {
-      alert(e.message || 'PDF 미리보기 중 오류가 발생했습니다.');
-      console.error(e);
-    }
-  }
-
-  /* === 기존 버튼 id 그대로 사용 === */
-  document.getElementById('saveBtn')?.addEventListener('click', onSavePDF);
-  document.getElementById('printBtn')?.addEventListener('click', onPrintPDF);
-  document.getElementById('resetBtn')?.addEventListener('click', () => {
-    document.getElementById('form')?.reset();
+/* === PDF 생성 공통 === */
+async function generatePDFBlob() {
+  const form = document.getElementById('form');
+  // 폼 검증이 다른 곳에 있다면 그 로직은 그대로 두고, 여기서는 에러만 표준화
+  const data = Object.fromEntries(new FormData(form).entries());
+  const resp = await fetch(fnUrl(), {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
   });
+  if(!resp.ok) {
+    // Netlify 함수 로그 확인에 도움이 되도록 상태메시지 노출
+    const msg = await resp.text().catch(()=>resp.statusText);
+    throw new Error(`PDF 생성 실패 (${resp.status}) ${msg}`);
+  }
+  return await resp.blob(); // application/pdf
+}
 
-  /* ⬇️ 아래 함수들은 기존에 있던 걸 그대로 사용 (건드리지 마세요) */
-  // setHiddenBirth(), validate(), updateJoinUI(), updateMVNO(), updateCardFields(), formatApplyDate() 등등
+/* === 저장 === */
+async function onSavePDF(e){
+  e?.preventDefault?.();
+
+  try{
+    // (필요시) hidden 값 세팅 등 사전처리 로직이 있으면 여기서 호출
+    const blob = await generatePDFBlob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    a.href = url;
+    a.download = `smartel_${ts}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(()=>URL.revokeObjectURL(url), 600000);
+  }catch(err){
+    alert('PDF 생성 중 오류가 발생했습니다.');
+    console.error(err);
+  }
+}
+
+/* === 인쇄 === */
+async function onPrintPDF(e){
+  e?.preventDefault?.();
+
+  try{
+    const blob = await generatePDFBlob();
+    const url = URL.createObjectURL(blob);
+
+    // PDF만 보이는 새 탭
+    const w = window.open('', '_blank');
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8">
+      <title>SMARTEL 신청서</title>
+      <style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style>
+    </head><body>
+      <iframe id="pv" src="${url}"></iframe>
+      <script>
+        (function(){
+          const f = document.getElementById('pv');
+          f.addEventListener('load', function(){
+            try{ f.contentWindow && f.contentWindow.focus && f.contentWindow.print(); }
+            catch(e){ window.focus(); window.print(); }
+          });
+          window.addEventListener('afterprint', function(){
+            setTimeout(function(){ window.close(); }, 400);
+          });
+        })();
+      <\/script>
+    </body></html>`);
+    w.document.close();
+
+    setTimeout(()=>URL.revokeObjectURL(url), 600000);
+  }catch(err){
+    alert('PDF 생성 중 오류가 발생했습니다.');
+    console.error(err);
+  }
+}
+
+/* === 안전한 바인딩: 요소가 아직 없을 때 생기는 null 오류 차단 === */
+function ready(fn){
+  if(document.readyState !== 'loading') fn();
+  else document.addEventListener('DOMContentLoaded', fn);
+}
+
+ready(function(){
+  // 당일 날짜 자동 세팅(필드가 있을 때만)
+  const applyDate = document.getElementById('apply_date');
+  if(applyDate && !applyDate.value) applyDate.value = formatApplyDate(new Date());
+
+  const saveBtn  = document.getElementById('saveBtn');
+  const printBtn = document.getElementById('printBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  if(saveBtn)  saveBtn.addEventListener('click', onSavePDF);
+  if(printBtn) printBtn.addEventListener('click', onPrintPDF);
+  if(resetBtn) resetBtn.addEventListener('click', ()=> document.getElementById('form')?.reset());
+});
 </script>
 
   const I18N = {
