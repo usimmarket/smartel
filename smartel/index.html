@@ -1383,171 +1383,129 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 <!-- Paste this <script> block immediately BEFORE the closing </body> in your existing index.html -->
-<script>
 
-</script>
-<!-- Paste this single <script> block immediately BEFORE the closing </body> tag. 
-     Remove older/duplicate PDF scripts (any blocks titled: 
-     1) the one that starts with "// 1) Netlify Functions 경로 (로컬 file:// ... )",
-     2) <script id="smartel-pdf-fix"> ... </script>,
-     3) the block that starts with "/* ====== SMARTEL: PDF 저장/인쇄 전용 패치 ====== */".
-     Keep all other HTML/CSS/i18n/validation as-is. -->
-<script id="smartel-pdf-final">
+<script>
+/* SMARTEL: Save/Print 단일 바인더 + 자동 폴백 */
 (function(){
   'use strict';
 
-  // ----------------------------
-  // 0) Helper: Netlify Function
-  // ----------------------------
-  var FN_REL = '/.netlify/functions/generate_top';
-  var FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_top'; // <- change to your site if needed
-  function getFnUrl(){
-    // If served via http(s) keep it relative to current site; if opened via file:// use absolute
-    return (location.protocol.indexOf('http') === 0) ? FN_REL : FN_ABS;
+  // === 설정 ==============================
+  // Netlify 함수가 다른 도메인/서브도메인이라면 이 값만 바꾸세요.
+  const ABS_FALLBACK = 'https://smartel.netlify.app/.netlify/functions/generate_top';
+  const SKIP_VALIDATE_FOR_TEST = false; // 테스트로 검증 건너뛰고 싶으면 true
+  // =======================================
+
+  function fnUrl(){
+    try {
+      return /^https?:/.test(location.href) ? '/.netlify/functions/generate_top' : ABS_FALLBACK;
+    } catch(_) { return ABS_FALLBACK; }
   }
 
-  // ----------------------------
-  // 1) Small field helpers
-  // ----------------------------
-  function qs(sel){return document.querySelector(sel);} 
-  function setApplyDateOnce(){
-    try{
-      var el = qs('#apply_date');
-      if(!el || el.value) return;
-      var d=new Date();
-      var v = '신청일자 '+d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+String(d.getDate()).padStart(2,'0')+'일';
-      el.value = v;
-    }catch(_){/*noop*/}
+  function validateOk(){
+    if (SKIP_VALIDATE_FOR_TEST) return true;
+    try {
+      if (typeof window.__smartelValidate === 'function') return !!window.__smartelValidate();
+      if (typeof window.validate === 'function')        return !!window.validate();
+    } catch(_) {}
+    return true; // 검증이 없다면 통과
   }
-  setApplyDateOnce();
 
-  // Build JSON from form + a few computed fields
-  function collectFormJSON(){
-    var f = qs('#form') || qs('form');
-    var data = f ? Object.fromEntries(new FormData(f).entries()) : {};
-    // Birth hidden sync (numbers only)
-    var rb = (qs('#birth_in')||{}).value || '';
-    if(rb) data.birth = rb.replace(/\D/g,'');
-    // Card YY/MM compose when card is selected
-    var method = qs('input[name="autopay_method"]:checked');
-    if(method && method.value === 'card'){
-      var yy=(qs('#card_exp_year')||{}).value||'';
-      var mm=(qs('#card_exp_month')||{}).value||'';
-      if(yy && mm) data.autopay_exp = yy+'/'+mm;
+  // 충돌 제거(기존 리스너 제거용): 노드 클론 후 교체
+  function resetButton(el){
+    if(!el) return null;
+    const clone = el.cloneNode(true);
+    el.parentNode.replaceChild(clone, el);
+    return clone;
+  }
+
+  async function postAndGetBlob(){
+    const form = document.getElementById('form') || document.querySelector('form');
+    if(!form) throw new Error('FORM_NOT_FOUND');
+
+    // 폼 데이터 수집 + 자동보정
+    const fd = new FormData(form);
+
+    const birthIn = document.getElementById('birth_in');
+    if (birthIn) fd.set('birth', (birthIn.value||'').replace(/\D/g,''));
+
+    const method = document.querySelector('input[name="autopay_method"]:checked')?.value;
+    if (method === 'card') {
+      const yy = (document.getElementById('card_exp_year')?.value||'').trim();
+      const mm = (document.getElementById('card_exp_month')?.value||'').trim();
+      if (yy && mm) fd.set('autopay_exp', `${yy}/${mm}`);
     }
-    return data;
-  }
 
-  function validateIfPresent(){
-    try{ return (typeof window.validate === 'function') ? !!window.validate() : true; }catch(_){ return true; }
-  }
+    const data = Object.fromEntries(fd.entries());
+    console.log('[PDF] POST', fnUrl(), data);
 
-  // ----------------------------
-  // 2) Call Netlify Function
-  // ----------------------------
-  async function generatePDFBlob(){
-    var payload = collectFormJSON();
-    // devtools aid
-    console.log('[SMARTEL] POST ->', getFnUrl(), payload);
-    var resp = await fetch(getFnUrl(), {
+    const r = await fetch(fnUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
     });
-    if(!resp.ok){
-      // surface function error for quick diagnosis
-      var t = '';
-      try{ t = await resp.text(); }catch(_){ }
-      console.error('[SMARTEL] Function error', resp.status, t);
-      throw new Error('PDF 생성 실패 ('+resp.status+')');
+    if(!r.ok){
+      const t = await r.text().catch(()=> '');
+      console.error('[PDF] Function error', r.status, t);
+      throw new Error('FN_'+r.status);
     }
-    return await resp.blob();
+    return await r.blob();
   }
 
-  // ----------------------------
-  // 3) UI actions (save / print)
-  // ----------------------------
   async function doSave(){
-    if(window.__smartelBusy) return; window.__smartelBusy = true;
+    if(!validateOk()){ window.scrollTo({top:0, behavior:'smooth'}); return; }
     try{
-      if(!validateIfPresent()){ window.scrollTo({top:0,behavior:'smooth'}); return; }
-      var blob = await generatePDFBlob();
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
+      const blob = await postAndGetBlob();
+      const url  = URL.createObjectURL(blob);
+      const a = document.createElement('a');
       a.href = url; a.download = 'smartel_form.pdf';
       document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
-    } finally { window.__smartelBusy = false; }
+      setTimeout(()=>URL.revokeObjectURL(url), 600000);
+    }catch(e){
+      alert('서버 PDF 생성에 실패했습니다. 브라우저 인쇄(PDF로 저장)로 폴백합니다.');
+      console.error(e);
+      window.print(); // 쉬운 방법(폴백)
+    }
   }
 
   async function doPrint(){
-    if(window.__smartelBusy) return; window.__smartelBusy = true;
+    if(!validateOk()){ window.scrollTo({top:0, behavior:'smooth'}); return; }
     try{
-      if(!validateIfPresent()){ window.scrollTo({top:0,behavior:'smooth'}); return; }
-      var blob = await generatePDFBlob();
-      var url = URL.createObjectURL(blob);
-      var w = window.open('about:blank','_blank','noopener,noreferrer');
-      var doc = w.document; doc.open();
-      doc.write('<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title>'+
-                '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>'+
-                '</head><body></body></html>');
-      doc.close();
-      var iframe = doc.createElement('iframe');
-      iframe.style.cssText = 'border:0;width:100vw;height:100vh';
-      iframe.src = url; doc.body.appendChild(iframe);
-      iframe.addEventListener('load', function(){
-        try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }
-        catch(e){ w.focus(); w.print(); }
-      });
-      w.addEventListener('afterprint', function(){ setTimeout(function(){ w.close(); }, 400); });
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
-    } finally { window.__smartelBusy = false; }
+      const blob = await postAndGetBlob();
+      const url  = URL.createObjectURL(blob);
+      const w = window.open('', '_blank','noopener');
+      w.document.write(
+        '<!doctype html><meta charset="utf-8"><title>SMARTEL 신청서</title>' +
+        '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+        '<iframe id="pv" src="'+url+'"></iframe>'
+      );
+      w.document.close();
+      w.addEventListener('load', ()=>{ try{ w.focus(); w.print(); }catch(_){} });
+      setTimeout(()=>URL.revokeObjectURL(url), 600000);
+    }catch(e){
+      alert('서버 PDF 생성에 실패했습니다. 페이지 자체를 인쇄합니다.');
+      console.error(e);
+      window.print(); // 쉬운 방법(폴백)
+    }
   }
 
-  // ----------------------------
-  // 4) Robust button binding
-  // ----------------------------
-  function findSaveButton(){
-    return (
-      qs('#savePdfBtn') || qs('#saveBtn') || qs('#pdfBtn') ||
-      qs('[data-action="save-pdf"]') ||
-      Array.prototype.slice.call(document.querySelectorAll('button,a,[role="button"]')).find(function(b){
-        return /PDF\s*저장|Save\s*PDF/i.test((b.textContent||'').trim());
-      })
-    );
-  }
-  function findPrintButton(){
-    return (
-      qs('#printBtn') || qs('[data-action="print-pdf"]') ||
-      Array.prototype.slice.call(document.querySelectorAll('button,a,[role="button"]')).find(function(b){
-        return /인쇄|Print/i.test((b.textContent||'').trim());
-      })
-    );
-  }
-  function bind(btn, fn){ if(btn && !btn.__smartelBound){ btn.addEventListener('click', function(e){ e.preventDefault(); fn(); }, true); btn.__smartelBound = true; } }
+  function init(){
+    // 고정 ID 버튼만 사용(충돌 방지 위해 기존 리스너 제거)
+    const save  = resetButton(document.getElementById('saveBtn'));
+    const print = resetButton(document.getElementById('printBtn'));
 
-  function wire(){ bind(findSaveButton(), doSave); bind(findPrintButton(), doPrint); console.log('[SMARTEL] PDF handlers ready'); }
-  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', wire); } else { wire(); }
+    if (save)  save.addEventListener('click',  (e)=>{ e.preventDefault(); e.stopImmediatePropagation(); doSave();  }, {capture:true});
+    if (print) print.addEventListener('click', (e)=>{ e.preventDefault(); e.stopImmediatePropagation(); doPrint(); }, {capture:true});
 
-  // ----------------------------
-  // 5) Clean up any leaked code-as-text at page bottom (rare on some CMS)
-  // ----------------------------
-  function cleanupLeak(){
-    try{
-      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      var g=[], s;
-      while(s=w.nextNode()){
-        var t = s.nodeValue||'';
-        if(t.indexOf('generate_top')>-1 || t.indexOf('PDF 저장')>-1 || t.indexOf('SMARTEL 패치')>-1){ g.push(s); }
-      }
-      g.forEach(function(n){ if(n.parentNode) n.parentNode.removeChild(n); });
-      document.body.style.overflowX='hidden';
-    }catch(_){/*noop*/}
+    console.log('[SMARTEL] binder ready', {save:!!save, print:!!print, url:fnUrl()});
   }
-  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', cleanupLeak); } else { cleanupLeak(); }
-  setTimeout(cleanupLeak, 800);
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  // 디버그 도우미
+  window.__smartelDebug = {fnUrl, doSave, doPrint};
 })();
 </script>
-  
+ 
 </body>
 </html>
