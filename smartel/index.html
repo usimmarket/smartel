@@ -1355,6 +1355,117 @@ document.addEventListener('DOMContentLoaded', function(){
   if (resetBtn) resetBtn.addEventListener('click', ()=> document.getElementById('form')?.reset());
 })();
 </script>
+<!-- Paste this <script> block immediately BEFORE the closing </body> in your existing index.html -->
+<script id="smartel-pdf-fix">
+(function(){
+  'use strict';
+  // --- 1) Robust Netlify Function URL (works both on Netlify and when opening file:// locally)
+  var FN_REL = '/.netlify/functions/generate_top';
+  var FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_top'; // change if your site domain differs
+  function apiUrl(){ return (location.protocol.indexOf('http') === 0) ? FN_REL : FN_ABS; }
+
+  // --- 2) Helpers -----------------------------------------------------------
+  function qs(sel){ return document.querySelector(sel); }
+  function qsa(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function onlyDigits(el){ if(!el) return; el.addEventListener('input', function(){ el.value = el.value.replace(/\D+/g,''); }); }
+
+  // ensure apply date (today) appears
+  function formatApplyDate(d){
+    var y=d.getFullYear(), m=d.getMonth()+1, dd=('0'+d.getDate()).slice(-2);
+    return '신청일자 '+y+'년 '+m+'월 '+dd+'일';
+  }
+  try { var ad=qs('#apply_date'); if(ad && !ad.value) ad.value = formatApplyDate(new Date()); }catch(_){/*noop*/}
+
+  // keep birth hidden field in sync (if that field exists in your form)
+  function setHiddenBirth(){ var raw = (qs('#birth_in')||{}).value||''; var h=qs('#birth'); if(h) h.value = raw.replace(/\D/g,''); }
+
+  // toggle card expiry fields (uses existing markup if present)
+  function updateCardFields(){
+    var methodEl = qs('input[name="autopay_method"]:checked');
+    var isCard = methodEl && methodEl.value === 'card';
+    var cf = qs('#card_fields'); if(cf) cf.style.display = isCard ? 'block' : 'none';
+  }
+  qsa('input[name="autopay_method"]').forEach(function(r){ r.addEventListener('change', updateCardFields); });
+  updateCardFields();
+
+  // numeric sanitizers for common fields (safe no-ops if missing)
+  ['birth_in','subscriber_phone','wish4','port_number','autopay_birth','autopay_number','card_exp_year','card_exp_month','sim_serial']
+    .forEach(function(id){ onlyDigits(qs('#'+id)); });
+
+  // --- 3) PDF generation via Netlify Function ------------------------------
+  async function generatePDFBlob(){
+    var form = qs('#form') || qs('form');
+    if(!form) throw new Error('form not found');
+    var data = Object.fromEntries(new FormData(form).entries());
+    var resp = await fetch(apiUrl(), { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if(!resp.ok) throw new Error('PDF generate failed: '+resp.status);
+    return await resp.blob();
+  }
+
+  // use page's own validate() if present; otherwise always pass
+  function runValidate(){ try { return (typeof window.validate === 'function') ? !!window.validate() : true; } catch(_){ return true; } }
+
+  async function onSavePDF(){
+    try{
+      setHiddenBirth();
+      // compose YY/MM if card was chosen (optional fields)
+      var yy = (qs('#card_exp_year')||{}).value||'';
+      var mm = (qs('#card_exp_month')||{}).value||'';
+      var apExp = qs('#autopay_exp'); if(apExp && yy && mm) apExp.value = yy+'/'+mm;
+      if(!runValidate()) { window.scrollTo({top:0, behavior:'smooth'}); return; }
+      var blob = await generatePDFBlob();
+      var url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
+    }catch(e){ alert('PDF 생성 중 오류가 발생했습니다.'); console.error(e); }
+  }
+
+  async function onPrintPDF(){
+    try{
+      setHiddenBirth();
+      var yy = (qs('#card_exp_year')||{}).value||'';
+      var mm = (qs('#card_exp_month')||{}).value||'';
+      var apExp = qs('#autopay_exp'); if(apExp && yy && mm) apExp.value = yy+'/'+mm;
+      if(!runValidate()) { window.scrollTo({top:0, behavior:'smooth'}); return; }
+      var blob = await generatePDFBlob();
+      var url = URL.createObjectURL(blob);
+      var w = window.open('', '_blank');
+      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title>'+
+        '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>'+
+        '</head><body>\n'+
+        '<iframe id="pv" src="'+url+'"></iframe>\n'+
+        '<script>\n  var f=document.getElementById("pv");\n  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});\n  window.addEventListener("afterprint",function(){setTimeout(function(){window.close();},400);});\n<\/script>\n'+
+        '</body></html>');
+      w.document.close();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
+    }catch(e){ alert('PDF 생성 중 오류가 발생했습니다.'); console.error(e); }
+  }
+
+  // --- 4) Bind buttons (IDs preferred, fallback by label text) -------------
+  function bind(el, fn){ if(el) el.addEventListener('click', function(ev){ ev.preventDefault(); fn(); }); }
+  bind(qs('#saveBtn'), onSavePDF);
+  bind(qs('#printBtn'), onPrintPDF);
+  // Fallback: find by visible text (KR/EN)
+  if(!qs('#saveBtn')){ qsa('button, a').forEach(function(b){ if(/^(PDF 저장|Save PDF)$/i.test(b.textContent.trim())) bind(b, onSavePDF); }); }
+  if(!qs('#printBtn')){ qsa('button, a').forEach(function(b){ if(/^(인쇄|Print)$/i.test(b.textContent.trim())) bind(b, onPrintPDF); }); }
+
+  // --- 5) Guard against rare “code leaking as plain text” at the page bottom
+  function cleanupLeak(){
+    try{
+      var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      var kill = [];
+      while(walker.nextNode()){
+        var t = walker.currentNode.nodeValue || '';
+        if(t.indexOf('const I18N')>-1 || t.indexOf('applyLang(')>-1 || t.indexOf("document.getElementById('printBtn')")>-1){ kill.push(walker.currentNode); }
+      }
+      kill.forEach(function(n){ if(n.parentNode) n.parentNode.removeChild(n); });
+      document.body.style.overflowX = 'hidden';
+    }catch(_){/*noop*/}
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cleanupLeak); else cleanupLeak();
+  setTimeout(cleanupLeak, 800); // run once more after layout
+})();
+</script>
   
 </body>
 </html>
