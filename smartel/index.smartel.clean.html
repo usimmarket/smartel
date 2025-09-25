@@ -1,0 +1,112 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SMARTEL 신청서 (클린 빌드)</title>
+  <style>
+    :root{ --bg:#0c1522; --card:#fff; --ink:#0f172a; --line:#e5e7eb; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif}
+    header{position:sticky;top:0;z-index:5;background:rgba(12,21,34,.95);backdrop-filter:blur(6px);color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+    .wrap{max-width:1100px;margin:0 auto;padding:12px 16px}
+    .card{background:var(--card);border-radius:10px;box-shadow:0 2px 0 rgba(15,23,42,.02),0 0 0 1px #f1f5f9;padding:16px;margin:16px 0}
+    label{display:block;font-size:12px;color:#374151;margin:6px 0}
+    input[type=text], select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;outline:0;background:#fff}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .fixbar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:rgba(12,21,34,.98);backdrop-filter:blur(6px);border-top:1px solid rgba(255,255,255,.06)}
+    .fixbar .wrap{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px}
+    .btn{border:1px solid #0ea5b7;background:#0ea5b7;color:#fff;border-radius:10px;padding:10px 14px;cursor:pointer}
+    .btn.out{background:transparent;color:#e2e8f0;border-color:#475569}
+    @media print{ header,.fixbar{display:none !important} .card{box-shadow:none;border:none;padding:0;margin:0} }
+  </style>
+</head>
+<body>
+  <header><div class="wrap"><strong>SMARTEL 신청서 (클린)</strong></div></header>
+
+  <main class="wrap">
+    <form id="form" class="card">
+      <h3>기본정보</h3>
+      <div class="row">
+        <div>
+          <label for="subscriber">가입자명</label>
+          <input id="subscriber" name="subscriber" type="text" placeholder="홍길동" />
+        </div>
+        <div>
+          <label for="birth_in">생년월일</label>
+          <input id="birth_in" name="birth_in_st" type="text" placeholder="YYYYMMDD" />
+          <input id="birth" name="birth" type="hidden" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="addr">주소</label>
+          <input id="addr" name="addr" type="text" placeholder="도로명 주소" />
+        </div>
+        <div>
+          <label for="apply_date">신청일자</label>
+          <input id="apply_date" name="apply_date" type="text" readonly />
+        </div>
+      </div>
+
+      <h3>요금제</h3>
+      <div class="row">
+        <div>
+          <label for="plan_select">상세 요금제 선택</label>
+          <select id="plan_select" name="plan_select">
+            <option value="">선택</option>
+            <option value="smartel-sk-1">스마텔 SK 1</option>
+            <option value="smartel-lg-1">스마텔 LG 1</option>
+          </select>
+        </div>
+        <div>
+          <label for="plan_price">선택한 요금제 월요금</label>
+          <input id="plan_price" name="selectedPlanFee" type="text" readonly value="0" />
+        </div>
+      </div>
+
+      <h3>자동이체</h3>
+      <div class="row">
+        <div>
+          <label>방법</label>
+          <label><input type="radio" name="autopay_method" value="bank" checked> 은행</label>
+          <label><input type="radio" name="autopay_method" value="card"> 카드</label>
+        </div>
+        <div id="card_fields" style="display:none">
+          <label>카드 유효기간(YY/MM)</label>
+          <div class="row">
+            <input id="card_exp_year" type="text" placeholder="YY" />
+            <input id="card_exp_month" type="text" placeholder="MM" />
+            <input id="autopay_exp" name="autopay_exp" type="hidden" />
+          </div>
+        </div>
+      </div>
+
+      <h3>USIM</h3>
+      <div class="row">
+        <div>
+          <label for="sim2">USIM 일련번호</label>
+          <input id="sim2" name="sim2" type="text" />
+        </div>
+        <div>
+          <label for="subscriber_phone">가입자 번호</label>
+          <input id="subscriber_phone" name="subscriber_phone" type="text" />
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <div class="fixbar">
+    <div class="wrap">
+      <button class="btn out" type="reset" onclick="document.getElementById('form').reset()">초기화</button>
+      <button id="saveBtn" class="btn out">PDF 저장</button>
+      <button id="printBtn" class="btn">인쇄</button>
+    </div>
+  </div>
+
+  <!-- Single external binder (v2). Change path if you host in other folder -->
+  <script defer src="/smartel/smartel-pdf-binder.js"></script>
+</body>
+</html>
