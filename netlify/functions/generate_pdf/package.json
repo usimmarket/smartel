@@ -1,0 +1,10 @@
+{
+  "name": "generate_pdf",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "@pdf-lib/fontkit": "^2.1.1"
+  }
+}
