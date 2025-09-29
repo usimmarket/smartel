@@ -1257,31 +1257,46 @@ document.addEventListener('DOMContentLoaded', function(){
     if (el) el.value = `신청일자 ${d.getFullYear()}년 ${d.getMonth()+1}월 ${pad(d.getDate())}일`;
   })();
 
-  // 3) 자동이체 '카드' 부가 필드 토글
-  function updateCardFields(){
-    const sel = document.querySelector('input[name="autopay_method"]:checked');
-    const box = document.getElementById('card_fields');
-    if (box && sel) box.style.display = (sel.value === 'card') ? 'block' : 'none';
-  }
-  document.querySelectorAll('input[name="autopay_method"]').forEach(r=>{
-    r.addEventListener('change', updateCardFields);
-  });
-  updateCardFields(); // 초기 1회 보정
+ <script>
+// 카드/은행 선택에 따라 YY/MM 입력을 완전히 비활성/필수 전환
+function updateCardFields(){
+  const sel = document.querySelector('input[name="autopay_method"]:checked');
+  const isCard = sel && sel.value === 'card';
 
-  // 4) PDF 생성 공통 루틴
-  function setHiddenValues(){
-    // 생년월일 숨김 값 동기화
-    const birthIn = document.getElementById('birth_in');
-    const birth = document.getElementById('birth');
-    if (birthIn && birth) birth.value = birthIn.value.replace(/\D/g,'');
+  const box = document.getElementById('card_fields');
+  const yy  = document.getElementById('card_exp_year');
+  const mm  = document.getElementById('card_exp_month');
 
-    // 카드 유효기간 YY/MM 합치기
-    if (document.querySelector('input[name="autopay_method"]:checked')?.value === 'card') {
-      const yy = (document.getElementById('card_exp_year')?.value||'').trim();
-      const mm = (document.getElementById('card_exp_month')?.value||'').trim();
-      if (yy && mm) (document.getElementById('autopay_exp')||{}).value = `${yy}/${mm}`;
+  if (box) box.style.display = isCard ? 'block' : 'none';
+
+  [yy, mm].forEach(function(el){
+    if (!el) return;
+    el.disabled = !isCard;     // ★ 비활성화하면 커스텀 검증에서 제외됨
+    el.required = isCard;      // ★ 카드일 때만 필수
+
+    if (!isCard){
+      // 값/오류 표시 정리
+      el.value = '';
+      el.classList.remove('is-invalid');
+      const wrap = el.closest('.form-group') || el.parentElement;
+      const hint = wrap && wrap.querySelector('.smartel-err');
+      if (hint) hint.remove();
     }
+  });
+
+  // 은행 선택 시 합쳐 넣는 hidden 값도 비움 (안전)
+  if (!isCard){
+    const expHidden = document.getElementById('autopay_exp');
+    if (expHidden) expHidden.value = '';
   }
+}
+
+// 초기 바인딩 + 1회 상태 보정
+document.querySelectorAll('input[name="autopay_method"]').forEach(function(r){
+  r.addEventListener('change', updateCardFields);
+});
+updateCardFields();
+</script>
 
   async function generatePDFBlob() {
     const form = document.getElementById('form');
