@@ -1257,25 +1257,26 @@ document.addEventListener('DOMContentLoaded', function(){
     if (el) el.value = `신청일자 ${d.getFullYear()}년 ${d.getMonth()+1}월 ${pad(d.getDate())}일`;
   })();
 
- <script>
-// 카드/은행 선택에 따라 YY/MM 입력을 완전히 비활성/필수 전환
+<script>
+// 카드/은행 선택에 따라 카드 만료 YY/MM 토글 + 오류 문구 정리
 function updateCardFields(){
   const sel = document.querySelector('input[name="autopay_method"]:checked');
-  const isCard = sel && sel.value === 'card';
+  const isCard = !!(sel && sel.value === 'card');
 
   const box = document.getElementById('card_fields');
   const yy  = document.getElementById('card_exp_year');
   const mm  = document.getElementById('card_exp_month');
+  const expHidden = document.getElementById('autopay_exp');
 
   if (box) box.style.display = isCard ? 'block' : 'none';
 
-  [yy, mm].forEach(function(el){
+  [yy, mm].forEach((el) => {
     if (!el) return;
-    el.disabled = !isCard;     // ★ 비활성화하면 커스텀 검증에서 제외됨
-    el.required = isCard;      // ★ 카드일 때만 필수
+    el.disabled = !isCard;   // 은행이면 비활성 → 검증 대상에서 제외
+    el.required = isCard;    // 카드일 때만 필수
 
-    if (!isCard){
-      // 값/오류 표시 정리
+    if (!isCard) {
+      // 은행이면 값/오류 정리
       el.value = '';
       el.classList.remove('is-invalid');
       const wrap = el.closest('.form-group') || el.parentElement;
@@ -1284,17 +1285,15 @@ function updateCardFields(){
     }
   });
 
-  // 은행 선택 시 합쳐 넣는 hidden 값도 비움 (안전)
-  if (!isCard){
-    const expHidden = document.getElementById('autopay_exp');
-    if (expHidden) expHidden.value = '';
-  }
+  if (!isCard && expHidden) expHidden.value = '';
 }
 
-// 초기 바인딩 + 1회 상태 보정
-document.querySelectorAll('input[name="autopay_method"]').forEach(function(r){
+// 라디오 변경시 토글
+document.querySelectorAll('input[name="autopay_method"]').forEach(r => {
   r.addEventListener('change', updateCardFields);
 });
+
+// 초기 1회 보정
 updateCardFields();
 </script>
 
