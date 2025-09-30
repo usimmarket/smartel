@@ -1675,151 +1675,84 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <!-- SMARTEL single-bind patch END -->
-<!-- SMARTEL pdf-capture + exclusive-bind patch v4 START -->
 <script>
 (function(){
-  const log = (...a)=>console.log('[SMARTEL]', ...a);
-
-  // 0) generate_pdf 응답 Blob 캡처
-  (function interceptFetch(){
-    if (window.__smartelFetchPatched) return;
+  // 1) 최근 generate_pdf 응답 Blob 캡처(이미 v4 패치가 있다면 재사용)
+  if (!window.getLastPdfBlob) {
     const _fetch = window.fetch;
-    let lastPdfBlob = null;
-
-    window.fetch = async function(input, init){
+    let last = null;
+    window.fetch = async function(i, init){
       const res = await _fetch.apply(this, arguments);
       try {
-        const url = (typeof input === 'string') ? input : (input && input.url) || '';
+        const url = (typeof i === 'string') ? i : (i && i.url) || '';
         if (/\/\.netlify\/functions\/generate_pdf\b/.test(url)) {
-          const clone = res.clone();
-          const b = await clone.blob();
-          if (b && b.size) {
-            lastPdfBlob = (b.type === 'application/pdf')
-              ? b
-              : new Blob([await b.arrayBuffer()], { type: 'application/pdf' });
-            window.__SMARTEL_LAST_PDF__ = lastPdfBlob;
-            log('captured PDF blob:', lastPdfBlob.size, 'bytes');
-          }
+          const b = await res.clone().blob();
+          last = (b && b.type === 'application/pdf') ? b :
+                 (b ? new Blob([await b.arrayBuffer()], {type:'application/pdf'}) : null);
+          window.__SMARTEL_LAST_PDF__ = last;
         }
-      } catch(e){ /* ignore */ }
+      } catch(e){}
       return res;
     };
-
-    window.getLastPdfBlob = async function(){
-      if (lastPdfBlob) return lastPdfBlob;
+    window.getLastPdfBlob = async ()=> {
+      if (last) return last;
       throw new Error('No captured PDF blob');
     };
+  }
 
-    window.__smartelFetchPatched = true;
-  })();
-
-  // 1) generatePDFBlob → Blob 보장 (없으면 캡처본 사용)
+  // 2) Blob 보장 함수: 기존 generatePDFBlob이 undefined/잘못된 값을 주면 캡처본 사용
   async function getPdfBlobGuaranteed(){
-    // 1) 기존 함수가 Blob을 "반환"하면 그대로 사용
-    if (typeof window.generatePDFBlob === 'function') {
-      log('calling generatePDFBlob()');
+    if (typeof window.generatePDFBlob === 'function'){
       const any = await window.generatePDFBlob();
-      log('generatePDFBlob() returned:', any);
-      if (any instanceof Blob) {
-        return (any.type === 'application/pdf') ? any
-             : new Blob([await any.arrayBuffer()], { type:'application/pdf' });
-      }
-      // Uint8Array/ArrayBuffer 등
-      if (any && any.byteLength !== undefined) {
-        return new Blob([any], { type:'application/pdf' });
-      }
-      // Response 형태
-      if (any && typeof any.blob === 'function') {
-        const b = await any.blob();
-        return (b.type === 'application/pdf') ? b
-             : new Blob([await b.arrayBuffer()], { type:'application/pdf' });
-      }
-      // 반환값이 undefined인 구현 → 캡처본 사용
-      log('no blob returned; trying captured blob');
+      if (any instanceof Blob) return (any.type==='application/pdf') ? any : new Blob([await any.arrayBuffer()],{type:'application/pdf'});
+      if (any && any.byteLength!==undefined) return new Blob([any],{type:'application/pdf'});
+      if (any && typeof any.blob==='function'){ const b = await any.blob(); return (b.type==='application/pdf')? b : new Blob([await b.arrayBuffer()],{type:'application/pdf'}); }
     }
-    // 2) fetch 인터셉터가 저장한 최신 Blob 사용
-    if (typeof window.getLastPdfBlob === 'function') {
-      return await window.getLastPdfBlob();
-    }
-    throw new Error('Invalid PDF payload (no return, no capture)');
+    return await window.getLastPdfBlob();
   }
 
-function openOnly(blob){
-  if (!blob || !blob.size) throw new Error('Empty PDF blob');
-  const url = URL.createObjectURL(blob);
-  // 무조건 새 탭으로만 연다(다운로드 폴백 없음)
-  window.open(url, '_blank', 'noopener,noreferrer');
-  setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
-}
-
+  function openOnly(blob){
+    if (!blob || !blob.size) throw new Error('Empty PDF blob');
+    const u = URL.createObjectURL(blob);
+    window.open(u, '_blank', 'noopener,noreferrer');
+    setTimeout(()=>URL.revokeObjectURL(u), 60_000);
   }
 
-  // 2) 버튼에 "독점 바인딩" (다른 리스너/inline onclick 무력화)
-  function bindExclusive(selectorOrEl, handler){
-    const el = (typeof selectorOrEl === 'string') ? document.querySelector(selectorOrEl) : selectorOrEl;
-    if (!el) return null;
-    // inline onclick 제거
-    try { el.onclick = null; el.removeAttribute('onclick'); } catch(e){}
-    // 기존 리스너들보다 먼저/유일하게 실행되도록 capture + immediate stop
-    el.addEventListener('click', function(ev){
-      ev.preventDefault();
-      ev.stopPropagation();
-      ev.stopImmediatePropagation();
-      handler(ev);
-    }, true); // capture
-    return el;
+  // 3) 레거시 onPrintPDF/onSavePDF 완전 덮어쓰기(여기만 사용)
+  window.onPrintPDF = async function(ev){
+    try{
+      ev && ev.preventDefault();
+      const b = await getPdfBlobGuaranteed(); // 반드시 Blob
+      openOnly(b);                             // 인쇄=열기만
+    }catch(e){ console.error('[SMARTEL] print failed', e); alert('PDF 미리보기를 열 수 없습니다. 콘솔을 확인해주세요.'); }
+  };
+
+  window.onSavePDF = async function(ev){
+    try{
+      ev && ev.preventDefault();
+      const b = await getPdfBlobGuaranteed(); // 반드시 Blob
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'smartel.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 60_000);
+    }catch(e){ console.error('[SMARTEL] save failed', e); alert('PDF 저장 중 오류가 발생했습니다.'); }
+  };
+
+  // 4) 버튼 재바인딩(기존 onclick/리스너 제거 후 새로 연결)
+  function rebind(id, handler){
+    const old = document.getElementById(id);
+    if (!old) return;
+    try { old.onclick = null; old.removeAttribute('onclick'); } catch(e){}
+    const btn = old.cloneNode(true);
+    old.parentNode.replaceChild(btn, old);
+    btn.addEventListener('click', handler);
   }
-
-async function onExclusivePrint(ev){
-  try{
-    const blob = await getPdfBlobGuaranteed();
-    openOnly(blob);
-  }catch(err){
-    console.error('[SMARTEL] print failed:', err);
-    alert('PDF를 열 수 없습니다. 콘솔 로그를 확인해주세요.');
-    }
-  }
-async function onExclusiveSave(ev){
-  try{
-    const blob = await getPdfBlobGuaranteed();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'smartel.pdf';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 60*1000);
-  }catch(err){
-    console.error('[SMARTEL] save failed:', err);
-    alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인해주세요.');
-    }
-  }
-
-  // 3) 대상 버튼 찾기 (id 우선, 없으면 텍스트/aria-label로 폴백)
-  function findByTextFallback(words){
-    const nodes = Array.from(document.querySelectorAll('button,a,[role="button"]'));
-    const keys = words.map(w=>w.toLowerCase());
-    return nodes.find(n=>{
-      const t = (n.innerText||n.textContent||'').toLowerCase();
-      const a = (n.getAttribute('aria-label')||'').toLowerCase();
-      const id= (n.id||'').toLowerCase();
-      const da= (n.getAttribute('data-action')||'').toLowerCase();
-      return keys.some(k=>t.includes(k)||a.includes(k)||id.includes(k)||da.includes(k));
-    }) || null;
-  }
-
-  const printBtn = document.getElementById('printBtn') || findByTextFallback(['인쇄','print']);
-  const saveBtn  = document.getElementById('saveBtn')  || findByTextFallback(['저장','save','download']);
-
-  if (printBtn) { bindExclusive(printBtn, onExclusivePrint); log('exclusive bound (print):', printBtn); }
-  if (saveBtn)  { bindExclusive(saveBtn,  onExclusiveSave ); log('exclusive bound (save):',  saveBtn ); }
-
-  // 4) 단축키(보조): Alt+P / Alt+S
-  document.addEventListener('keydown', function(e){
-    if (e.altKey && (e.key==='p'||e.key==='P')) { e.preventDefault(); onExclusivePrint(e); }
-    if (e.altKey && (e.key==='s'||e.key==='S')) { e.preventDefault(); onExclusiveSave(e); }
-  });
+  rebind('printBtn', window.onPrintPDF);
+  rebind('saveBtn',  window.onSavePDF);
 })();
 </script>
-<!-- SMARTEL pdf-capture + exclusive-bind patch v4 END -->
+
 <script>
 (function warmup(){
   // 1) 최초 진입 후 곧바로 워밍업
