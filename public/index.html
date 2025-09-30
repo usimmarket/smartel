@@ -361,7 +361,7 @@ header .centered img.logo{ height: 46px !important; }
 <script>
   // --- Netlify Functions 엔드포인트 결정 (한 곳만 존재해야 함) ---
   function fnUrl(){
-    const REL = '/.netlify/functions/generate_top';
+    const REL = '/.netlify/functions/generate_pdf';
     // 배포 사이트에서 열렸다면 동일 오리진으로 호출 (CORS/쿠키 안전)
     if (location.origin.includes('smartel.netlify.app')) {
       return REL;
@@ -1246,8 +1246,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 (function () {
   // 1) Netlify Functions 경로 (로컬 file:// 로 열었을 때도 동작하도록 절대경로 폴백)
-  const FN_REL = '/.netlify/functions/generate_top';
-  const FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_top';
+  const FN_REL = '/.netlify/functions/generate_pdf';
+  const FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_pdf';
   const fnUrl = () => (location.protocol.startsWith('http') ? FN_REL : FN_ABS);
 
   // 2) 신청일자 자동 채우기
@@ -1367,8 +1367,8 @@ document.addEventListener('DOMContentLoaded', function(){
 (function(){
   'use strict';
   // --- 1) Robust Netlify Function URL (works both on Netlify and when opening file:// locally)
-  var FN_REL = '/.netlify/functions/generate_top';
-  var FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_top'; // change if your site domain differs
+  var FN_REL = '/.netlify/functions/generate_pdf';
+  var FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_pdf'; // change if your site domain differs
   function apiUrl(){ return (location.protocol.indexOf('http') === 0) ? FN_REL : FN_ABS; }
 
   // --- 2) Helpers -----------------------------------------------------------
