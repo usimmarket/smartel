@@ -1675,105 +1675,107 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <!-- SMARTEL single-bind patch END -->
-<!-- SMARTEL open/save hardening patch START -->
+<!-- SMARTEL open/save hardening patch START (no-legacy-callback) -->
 <script>
 (function(){
-  // 이미 존재하는 generatePDFBlob을 재사용하되,
-  // 비어있는 응답/헤더 누락 등을 보완해서 항상 'application/pdf' Blob으로 리턴
-  async function _ensurePdfBlob(){
-    if (typeof window.generatePDFBlob === 'function') {
-      const anyBlob = await window.generatePDFBlob();
-      // 일부 구현은 Uint8Array나 ArrayBuffer를 반환할 수도 있음 → Blob으로 강제 변환
-      if (anyBlob instanceof Blob) {
-        if (anyBlob.type !== 'application/pdf') {
-          return new Blob([await anyBlob.arrayBuffer()], { type: 'application/pdf' });
-        }
-        return anyBlob;
-      }
-      if (anyBlob && anyBlob.byteLength !== undefined) {
-        return new Blob([anyBlob], { type: 'application/pdf' });
-      }
-      // 방어: fetch Response를 리턴한 경우
-      if (anyBlob && typeof anyBlob.blob === 'function') {
-        const b = await anyBlob.blob();
-        return (b.type === 'application/pdf') ? b : new Blob([await b.arrayBuffer()], { type:'application/pdf' });
-      }
-      throw new Error('Invalid PDF payload');
-    }
-    throw new Error('generatePDFBlob is not defined');
+  // 기존 핸들러를 완전히 대체하기 위해 버튼을 클론 스왑 + 캡처 단계에서 이벤트 차단
+  function rebind(id, handler){
+    var old = document.getElementById(id);
+    if(!old) return;
+    var btn = old.cloneNode(true);
+    old.parentNode.replaceChild(btn, old);
+    // 클릭 시 기본/전파 모두 차단하여 레거시 리스너가 실행되지 않게 함
+    btn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      handler(ev);
+    }, true); // capture=true
+    return btn;
   }
 
-  // 새 탭 열기 로직 (팝업 차단 시 자동 다운로드 폴백)
+  // generatePDFBlob을 신뢰 가능한 Blob으로 정규화
+  async function _ensurePdfBlob(){
+    if (typeof window.generatePDFBlob !== 'function') {
+      throw new Error('generatePDFBlob is not defined');
+    }
+    const any = await window.generatePDFBlob(); // 여기는 우리가 앞서 추가한 busy-guard가 감싸고 있음
+    if (any instanceof Blob) {
+      return (any.type === 'application/pdf')
+        ? any
+        : new Blob([await any.arrayBuffer()], { type:'application/pdf' });
+    }
+    if (any && any.byteLength !== undefined) {
+      return new Blob([any], { type:'application/pdf' });
+    }
+    if (any && typeof any.blob === 'function') {
+      const b = await any.blob();
+      return (b.type === 'application/pdf')
+        ? b
+        : new Blob([await b.arrayBuffer()], { type:'application/pdf' });
+    }
+    throw new Error('Invalid PDF payload');
+  }
+
   function openBlobInNewTabOrDownload(blob, filename){
     if (!blob || !blob.size) throw new Error('Empty PDF blob');
     const url = URL.createObjectURL(blob);
-    // 1) 새 탭 시도
     const w = window.open(url, '_blank', 'noopener,noreferrer');
-    // 2) 팝업 차단 시, 강제 다운로드
-    if (!w) {
+    if (!w) { // 팝업 차단 시 다운로드
       const a = document.createElement('a');
       a.href = url;
       a.download = filename || 'smartel.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      document.body.appendChild(a); a.click(); a.remove();
     }
-    // 3) 메모리 정리
-    setTimeout(()=>URL.revokeObjectURL(url), 60 * 1000);
+    setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
   }
 
-  // 안전한 인쇄/저장 핸들러 (기존 onPrintPDF/onSavePDF보다 우선 적용하고, 내부에서 원래 핸들러도 호출 가능)
-  async function safePrintHandler(ev){
+  // 레거시 핸들러를 호출하지 않는 안전 핸들러 (알림도 여기선 띄우지 않음)
+  async function safePrint(ev){
     try {
-      const pdfBlob = await _ensurePdfBlob();
-      openBlobInNewTabOrDownload(pdfBlob, 'smartel.pdf');  // 새 탭 열기 → 차단 시 다운로드
-      // 원래 onPrintPDF가 추가 작업(토스트/로그 등)을 한다면 호출 유지
-      if (window.onPrintPDF && window.onPrintPDF !== safePrintHandler) {
-        try { await window.onPrintPDF(ev); } catch {}
-      }
+      const blob = await _ensurePdfBlob();
+      openBlobInNewTabOrDownload(blob, 'smartel.pdf');
     } catch (err) {
-      console.error('[SMARTEL] Print failed:', err);
-      alert('PDF를 열 수 없습니다. 콘솔 로그를 확인해주세요.');
+      console.error('[SMARTEL] safePrint failed:', err);
+      // 필요시 여기서만 알림 표시: alert('PDF를 열 수 없습니다. 콘솔 로그를 확인해주세요.');
     }
   }
-
-  async function safeSaveHandler(ev){
+  async function safeSave(ev){
     try {
-      const pdfBlob = await _ensurePdfBlob();
-      // 저장(다운로드) 고정
+      const blob = await _ensurePdfBlob();
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(pdfBlob);
+      a.href = URL.createObjectURL(blob);
       a.download = 'smartel.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 60 * 1000);
-
-      if (window.onSavePDF && window.onSavePDF !== safeSaveHandler) {
-        try { await window.onSavePDF(ev); } catch {}
-      }
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 60*1000);
     } catch (err) {
-      console.error('[SMARTEL] Save failed:', err);
-      alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인해주세요.');
+      console.error('[SMARTEL] safeSave failed:', err);
+      // 필요시 알림 표시 가능
     }
   }
 
-  // 버튼 재바인딩(이 패치는 기존 바인딩을 덮어써서 "열기 실패"만 잡습니다)
-  const saveBtn = document.getElementById('saveBtn');
-  const printBtn = document.getElementById('printBtn');
-  if (saveBtn) {
-    const clone = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(clone, saveBtn);
-    clone.addEventListener('click', function(ev){ ev.preventDefault(); safeSaveHandler(ev); });
+  // 레거시 전파를 추가적으로 차단하기 위해 문서 레벨에서 버튼 클릭을 캡처 단계로 막음(선택)
+  function swallow(e){
+    const t = e.target;
+    if (!t) return;
+    const id = t.id || '';
+    if (id === 'saveBtn' || id === 'printBtn') {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
   }
-  if (printBtn) {
-    const clone = printBtn.cloneNode(true);
-    printBtn.parentNode.replaceChild(clone, printBtn);
-    clone.addEventListener('click', function(ev){ ev.preventDefault(); safePrintHandler(ev); });
-  }
+  document.addEventListener('click', swallow, true);
+
+  // 버튼 재바인딩(레거시 콜백 호출 안 함)
+  rebind('saveBtn',  safeSave);
+  rebind('printBtn', safePrint);
+
+  // 혹시 코드 어딘가에서 직접 window.onPrintPDF/Save를 호출한다면, 아예 대체해 둠
+  window.onPrintPDF = safePrint;
+  window.onSavePDF  = safeSave;
 })();
 </script>
-<!-- SMARTEL open/save hardening patch END -->
+<!-- SMARTEL open/save hardening patch END (no-legacy-callback) -->
   
 </body>
 </html>
