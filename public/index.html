@@ -445,6 +445,7 @@ header .centered img.logo{ height: 46px !important; }
 
   /* ⬇️ 아래 함수들은 기존에 있던 걸 그대로 사용 (건드리지 마세요) */
   // setHiddenBirth(), validate(), updateJoinUI(), updateMVNO(), updateCardFields(), formatApplyDate() 등등
+</script>
 <script>
   const I18N = {
     KR: {
@@ -530,6 +531,7 @@ header .centered img.logo{ height: 46px !important; }
   document.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click', e=>applyLang(e.currentTarget.dataset.lang)));
   applyLang('KR');
 
+</script>
 <script>
 /* THEONE PRINT/DOWNLOAD PATCH v3
  * - 저장: 새 탭 없이 바로 다운로드
@@ -1317,6 +1319,7 @@ document.addEventListener('DOMContentLoaded', function(){
       <style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
     </head><body>
       <iframe id="pv" src="${url}"></iframe>
+</script>
       <script>
         const f = document.getElementById('pv');
         f.addEventListener('load', () => {
@@ -1336,6 +1339,7 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 <!-- Paste this <script> block immediately BEFORE the closing </body> in your existing index.html -->
+</script>
 <script id="smartel-pdf-fix">
 (function(){
   'use strict';
@@ -1414,6 +1418,7 @@ document.addEventListener('DOMContentLoaded', function(){
         '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>'+
         '</head><body>\n'+
         '<iframe id="pv" src="'+url+'"></iframe>\n'+
+</script>
         '<script>\n  var f=document.getElementById("pv");\n  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});\n  window.addEventListener("afterprint",function(){setTimeout(function(){window.close();},400);});\n<\/script>\n'+
         '</body></html>');
       w.document.close();
