@@ -1215,33 +1215,6 @@ document.addEventListener('DOMContentLoaded', function(){
     return true;
   };
 
-  // 이미 연결된 저장/인쇄 핸들러가 있더라도 검증만 선행하도록 보강
-  function hook(btn){
-    if (!btn || btn.__smartelGuarded) return;
-    var handler = function(ev){
-      // 검증 실패 시 이후 모든 기본 동작 중단
-      if (!window.__smartelValidate()){
-        ev && ev.preventDefault && ev.preventDefault();
-        ev && ev.stopImmediatePropagation && ev.stopImmediatePropagation();
-        return false;
-      }
-      // 통과 시 기존 리스너(저장/열기/인쇄)는 그대로 실행
-    };
-    btn.addEventListener('click', handler, true); // 캡처 단계에서 먼저 개입
-    btn.__smartelGuarded = true;
-  }
-
-  // 저장/인쇄 버튼 찾아 검증 가드만 입히기
-  var saveBtn  = document.getElementById('savePdfBtn') ||
-                 Array.from(document.querySelectorAll('button,a'))
-                      .find(function(b){ return /PDF\s*저장|Save\s*PDF/i.test((b.textContent||'').trim()); });
-  var printBtn = document.getElementById('printBtn') ||
-                 Array.from(document.querySelectorAll('button,a'))
-                      .find(function(b){ return /인쇄|Print/i.test((b.textContent||'').trim()); });
-
-  hook(saveBtn);
-  hook(printBtn);
-})();
 </script> 
 <script>
 (function () {
