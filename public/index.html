@@ -1829,6 +1829,39 @@ async function onExclusiveSave(ev){
   setInterval(()=>{ fetch('./.netlify/functions/generate_pdf', { method:'POST', body: JSON.stringify({__warmup:true}) }).catch(()=>{}); }, 4*60*1000);
 })();
 </script>
+<script>
+(function(){
+  // 1) print/save 버튼의 inline onclick 제거(있다면)
+  var pb = document.getElementById('printBtn');
+  var sb = document.getElementById('saveBtn');
+  if (pb) { try{ pb.onclick = null; pb.removeAttribute('onclick'); }catch(e){} }
+  if (sb) { try{ sb.onclick = null; sb.removeAttribute('onclick'); }catch(e){} }
+
+  // 2) 레거시 전역 함수 무력화(같은 이름의 함수가 있다면 덮어쓰기)
+  //    에러의 실제 호출 스택이 (index):1539, 1543의 onPrintPDF이므로 이것만 끊습니다.
+  window.onPrintPDF = function(ev){
+    ev && ev.preventDefault();
+    ev && ev.stopPropagation();
+    ev && ev.stopImmediatePropagation();
+    // 아무 것도 하지 않음: 레거시 경로 차단
+    console.log('[SMARTEL] legacy onPrintPDF suppressed');
+  };
+
+  // 3) 혹시 다른 코드가 다시 addEventListener로 묶어도, 캡처 단계에서 중단
+  //    (우리가 v4에서 바인딩한 새 핸들러가 있으면 그게 먼저 실행됨)
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t) return;
+    var id = t.id || '';
+    if (id === 'printBtn') {
+      // 레거시 리스너 전파 차단
+      // (우리 v4 핸들러가 이미 실행되었고, 레거시만 못 가게 막음)
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+})();
+</script>
   
 </body>
 </html>
