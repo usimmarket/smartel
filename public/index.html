@@ -1632,6 +1632,49 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 })();
 </script>
+<!-- SMARTEL single-bind patch START -->
+<script>
+(function(){
+  // 1) 기존 save/print 리스너를 제거(클론 스왑)
+  ['saveBtn','printBtn'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var clone = el.cloneNode(true);            // 이벤트 리스너가 없는 새 버튼
+    el.parentNode.replaceChild(clone, el);
+  });
+
+  // 2) 헬퍼
+  var qs = (s, r)=> (r||document).querySelector(s);
+  function bind(el, fn){
+    if(!el || typeof fn!=='function') return;
+    el.addEventListener('click', function(ev){
+      ev.preventDefault();
+      fn(ev);
+    });
+  }
+
+  // 3) generatePDFBlob 중복 호출 가드 + 트레이스 (원본이 있을 때만 감쌈)
+  let _pdfBusy = false;
+  if (typeof window.generatePDFBlob === 'function') {
+    const _orig = window.generatePDFBlob;
+    window.generatePDFBlob = async function(){
+      if(_pdfBusy) return;
+      _pdfBusy = true;
+      try{
+        console.trace('[SMARTEL] generatePDFBlob called');
+        return await _orig.apply(this, arguments);
+      } finally {
+        _pdfBusy = false;
+      }
+    };
+  }
+
+  // 4) 새 바인딩만 연결(존재하는 핸들러에만 붙임, 없으면 no-op)
+  bind(qs('#saveBtn'),  window.onSavePDF  || window.onPrintPDF || function(){});
+  bind(qs('#printBtn'), window.onPrintPDF || window.onSavePDF  || function(){});
+})();
+</script>
+<!-- SMARTEL single-bind patch END -->
   
 </body>
 </html>
