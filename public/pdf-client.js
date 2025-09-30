@@ -101,3 +101,4 @@ if (print) print.addEventListener('click', (e) => {
   ensurePopup();
   run(true);
 });
+  })();
