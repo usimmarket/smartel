@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 
 <html lang="ko">
@@ -444,7 +445,7 @@ header .centered img.logo{ height: 46px !important; }
 
   /* ⬇️ 아래 함수들은 기존에 있던 걸 그대로 사용 (건드리지 마세요) */
   // setHiddenBirth(), validate(), updateJoinUI(), updateMVNO(), updateCardFields(), formatApplyDate() 등등
-</script>
+<script>
   const I18N = {
     KR: {
       app_form:"가입신청서", partner_only:"판매점 전용",
@@ -1769,5 +1770,71 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
   
+
+<!-- SMARTEL minimal print/save rebinder START -->
+<script>
+(function(){
+  function resetBtn(id){
+    var el=document.getElementById(id);
+    if(!el) return null;
+    try{ el.onclick=null; el.removeAttribute('onclick'); }catch(e){}
+    var clone=el.cloneNode(true);
+    el.parentNode.replaceChild(clone, el);
+    return clone;
+  }
+  var printBtn=resetBtn('printBtn');
+  var saveBtn=resetBtn('saveBtn');
+
+  async function getPdfBlobGuaranteed(){
+    try{
+      if (typeof window.generatePDFBlob==='function'){
+        const any=await window.generatePDFBlob();
+        if (any instanceof Blob) return (any.type==='application/pdf')? any : new Blob([await any.arrayBuffer()],{type:'application/pdf'});
+        if (any && any.byteLength!==undefined) return new Blob([any],{type:'application/pdf'});
+        if (any && typeof any.blob==='function'){ const b=await any.blob(); return (b.type==='application/pdf')? b : new Blob([await b.arrayBuffer()],{type:'application/pdf'}); }
+      }
+      if (window.__SMARTEL_LAST_PDF__ instanceof Blob) return window.__SMARTEL_LAST_PDF__;
+      if (typeof window.getLastPdfBlob==='function') return await window.getLastPdfBlob();
+    }catch(e){}
+    throw new Error('No PDF blob available');
+  }
+
+  async function printHandler(ev){
+    try{
+      ev && ev.preventDefault();
+      const blob=await getPdfBlobGuaranteed();
+      const url=URL.createObjectURL(blob);
+      const w=window.open(url,'_blank','noopener,noreferrer');
+      if(!w){
+        const a=document.createElement('a');
+        a.href=url; a.download='smartel.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      setTimeout(()=>URL.revokeObjectURL(url),60*1000);
+    }catch(e){ console.error('[SMARTEL] print failed',e); alert('PDF 미리보기를 열 수 없습니다. 콘솔을 확인해주세요.'); }
+  }
+
+  async function saveHandler(ev){
+    try{
+      ev && ev.preventDefault();
+      const blob=await getPdfBlobGuaranteed();
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='smartel.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),60*1000);
+    }catch(e){ console.error('[SMARTEL] save failed',e); alert('PDF 저장 중 오류가 발생했습니다.'); }
+  }
+
+  // override legacy globals
+  window.onPrintPDF=printHandler;
+  window.onSavePDF=saveHandler;
+
+  if(printBtn) printBtn.addEventListener('click', printHandler);
+  if(saveBtn)  saveBtn.addEventListener('click',  saveHandler);
+})();
+</script>
+<!-- SMARTEL minimal print/save rebinder END -->
+
 </body>
 </html>
