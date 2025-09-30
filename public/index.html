@@ -1474,23 +1474,23 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 <script>
-/* ====== SMARTEL: PDF 저장/인쇄 전용 패치 ====== */
+/* ===== SMARTEL: PDF 저장/인쇄 클라이언트 (고정 경로/메서드/에러표시) ===== */
 
-// 1) Netlify Functions 엔드포인트 (현재 배포 도메인 기준)
+// 1) Netlify Functions endpoint — 반드시 generate_pdf 로 고정
 function fnUrl() {
-  // 같은 사이트에서 호출하므로 절대경로를 현재 origin 기준으로 생성
-  return `${window.location.origin}/.netlify/functions/generate_top`;
+  return '/.netlify/functions/generate_pdf';
 }
 
-// 2) 현재 폼 데이터를 JSON으로 수집
+// 2) 폼 데이터 수집 (기존과 동일)
 function collectFormJSON() {
   const f = document.getElementById('form');
   const data = Object.fromEntries(new FormData(f).entries());
 
-  // 숨김 필드/자동채움 보정 (생년월일, 카드 유효기간 등)
+  // 보정: 생년월일 숫자만
   const rawBirth = (document.getElementById('birth_in')?.value || '').replace(/\D/g,'');
   if (rawBirth) data.birth = rawBirth;
 
+  // 보정: 카드 유효기간 YY/MM 합치기 (카드일 때만)
   const method = document.querySelector('input[name="autopay_method"]:checked')?.value;
   if (method === 'card') {
     const yy = (document.getElementById('card_exp_year')?.value || '').trim();
@@ -1500,31 +1500,42 @@ function collectFormJSON() {
   return data;
 }
 
-// 3) 서버에서 PDF Blob 받아오기
+// 3) 서버에 PDF 생성 요청
 async function generatePDFBlob() {
   const payload = collectFormJSON();
-  // 네트워크 확인 용 로그(화면엔 표시 안 됨)
+
+  // 문제 추적을 위한 로그
   console.log('[SMARTEL] POST ->', fnUrl(), payload);
 
   const resp = await fetch(fnUrl(), {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+
+  // 실패 시 서버 메시지 보여주기
   if (!resp.ok) {
-    // 함수 에러 원인을 콘솔에서 바로 볼 수 있도록
     const txt = await resp.text().catch(()=> '');
     console.error('[SMARTEL] Function error:', resp.status, txt);
+    alert(`상태코드 ${resp.status} / ${txt || '응답 본문 없음'}`);
     throw new Error('PDF 생성 실패');
   }
-  return await resp.blob();
+
+  const blob = await resp.blob();
+  // 혹시 JSON이 오면(오류 JSON) 막기
+  if (blob.type !== 'application/pdf') {
+    const txt = await blob.text().catch(()=> '');
+    console.error('[SMARTEL] Not a PDF:', txt);
+    alert(`PDF 아님 / ${txt || '알 수 없는 응답'}`);
+    throw new Error('PDF 아님');
+  }
+  return blob;
 }
 
-// 4) 저장 버튼: 파일 저장
+// 4) 저장
 async function onSavePDF(e) {
   e.preventDefault();
   try {
-    // 유효성 검사가 이미 페이지에 있다면 그대로 사용
     if (typeof validate === 'function' && !validate()) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -1539,12 +1550,11 @@ async function onSavePDF(e) {
     a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
   } catch (err) {
-    alert('PDF 생성 중 오류가 발생했습니다.');
     console.error(err);
   }
 }
 
-// 5) 인쇄 버튼: 새 창에 PDF 띄우고 자동 인쇄 (문자열 <script> 누출 방지)
+// 5) 인쇄
 async function onPrintPDF(e) {
   e.preventDefault();
   try {
@@ -1555,8 +1565,8 @@ async function onPrintPDF(e) {
     const blob = await generatePDFBlob();
     const url  = URL.createObjectURL(blob);
 
+    // 새창에 안전하게 띄우기
     const w = window.open('about:blank','_blank','noopener,noreferrer');
-    // 문자열 document.write 대신 DOM API로 안전하게 작성(하단 코드 누출 방지)
     const doc = w.document;
     doc.open();
     doc.write('<!doctype html><html><head><title>SMARTEL 신청서</title><meta charset="utf-8"></head><body style="margin:0;background:#111"></body></html>');
@@ -1572,23 +1582,29 @@ async function onPrintPDF(e) {
       catch (e) { w.focus(); w.print(); }
     });
     w.addEventListener('afterprint', () => setTimeout(() => w.close(), 400));
+
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
   } catch (err) {
-    alert('PDF 생성 중 오류가 발생했습니다.');
     console.error(err);
+    alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.');
   }
 }
 
-// 6) 버튼 바인딩 (DOM 준비 후 보장)
+// 6) 버튼 연결
 window.addEventListener('DOMContentLoaded', () => {
-  const save = document.getElementById('saveBtn') || document.getElementById('pdfBtn') || document.querySelector('[data-action="save-pdf"]');
+  const save  = document.getElementById('saveBtn')  || document.getElementById('pdfBtn') || document.querySelector('[data-action="save-pdf"]');
   const print = document.getElementById('printBtn') || document.querySelector('[data-action="print-pdf"]');
-  if (save)  save.addEventListener('click', onSavePDF, {passive:false});
+  // 버튼이 form submit로 동작하지 않게 타입 보정
+  if (save && save.type !== 'button')  save.type = 'button';
+  if (print && print.type !== 'button') print.type = 'button';
+
+  if (save)  save.addEventListener('click', onSavePDF,  {passive:false});
   if (print) print.addEventListener('click', onPrintPDF, {passive:false});
-  console.log('[SMARTEL] PDF handlers ready');
+  console.log('[SMARTEL] PDF handlers ready (generate_pdf)');
 });
-/* ====== /SMARTEL 패치 끝 ====== */
+/* ===== /SMARTEL ===== */
 </script>
+
 <script>
 /* Autopay: bank/card toggle — make card fields truly optional for 'bank' */
 (function(){
