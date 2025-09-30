@@ -1744,16 +1744,14 @@ window.addEventListener('DOMContentLoaded', () => {
     throw new Error('Invalid PDF payload (no return, no capture)');
   }
 
-  function openOrDownload(blob, filename){
-    if (!blob || !blob.size) throw new Error('Empty PDF blob');
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!w) { // 팝업 차단 시 다운로드
-      const a = document.createElement('a');
-      a.href = url; a.download = filename || 'smartel.pdf';
-      document.body.appendChild(a); a.click(); a.remove();
-    }
-    setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
+function openOnly(blob){
+  if (!blob || !blob.size) throw new Error('Empty PDF blob');
+  const url = URL.createObjectURL(blob);
+  // 무조건 새 탭으로만 연다(다운로드 폴백 없음)
+  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
+}
+
   }
 
   // 2) 버튼에 "독점 바인딩" (다른 리스너/inline onclick 무력화)
@@ -1772,26 +1770,26 @@ window.addEventListener('DOMContentLoaded', () => {
     return el;
   }
 
-  async function onExclusivePrint(ev){
-    try{
-      const blob = await getPdfBlobGuaranteed();
-      openOrDownload(blob, 'smartel.pdf');
-    }catch(err){
-      console.error('[SMARTEL] print failed:', err);
-      alert('PDF를 열 수 없습니다. 콘솔 로그를 확인해주세요.');
+async function onExclusivePrint(ev){
+  try{
+    const blob = await getPdfBlobGuaranteed();
+    openOnly(blob);
+  }catch(err){
+    console.error('[SMARTEL] print failed:', err);
+    alert('PDF를 열 수 없습니다. 콘솔 로그를 확인해주세요.');
     }
   }
-  async function onExclusiveSave(ev){
-    try{
-      const blob = await getPdfBlobGuaranteed();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'smartel.pdf';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 60*1000);
-    }catch(err){
-      console.error('[SMARTEL] save failed:', err);
-      alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인해주세요.');
+async function onExclusiveSave(ev){
+  try{
+    const blob = await getPdfBlobGuaranteed();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'smartel.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 60*1000);
+  }catch(err){
+    console.error('[SMARTEL] save failed:', err);
+    alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인해주세요.');
     }
   }
 
@@ -1822,7 +1820,15 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <!-- SMARTEL pdf-capture + exclusive-bind patch v4 END -->
+<script>
+(function warmup(){
+  // 1) 최초 진입 후 곧바로 워밍업
+  setTimeout(()=>{ fetch('./.netlify/functions/generate_pdf', { method:'POST', body: JSON.stringify({__warmup:true}) }).catch(()=>{}); }, 500);
 
+  // 2) 4분마다 한 번씩 얕게 핑(콜드 방지)
+  setInterval(()=>{ fetch('./.netlify/functions/generate_pdf', { method:'POST', body: JSON.stringify({__warmup:true}) }).catch(()=>{}); }, 4*60*1000);
+})();
+</script>
   
 </body>
 </html>
