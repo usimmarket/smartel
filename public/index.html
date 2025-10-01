@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 
 <html lang="ko">
@@ -1306,8 +1307,28 @@ document.addEventListener('DOMContentLoaded', function(){
         });
         window.addEventListener('afterprint', () => setTimeout(()=>window.close(), 400));
       <\/script>
-    </script>
-</body></html>`);
+    
+<!-- SMARTEL final minimal rebinder START -->
+<script>
+(function(){
+  function rebind(id, fn){
+    var old = document.getElementById(id);
+    if(!old) return;
+    try{ old.onclick = null; old.removeAttribute('onclick'); }catch(e){}
+    var btn = old.cloneNode(true);
+    old.parentNode.replaceChild(btn, old);
+    btn.addEventListener('click', fn);
+  }
+  if (typeof window.onPrintPDF==='function') rebind('printBtn', window.onPrintPDF);
+  if (typeof window.onSavePDF==='function')  rebind('saveBtn',  window.onSavePDF);
+  console.log('[SMARTEL] PDF handlers ready (generate_pdf)');
+})();
+</script>
+<!-- SMARTEL final minimal rebinder END -->
+
+</script>
+</body>
+</html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
   });
@@ -1397,7 +1418,27 @@ document.addEventListener('DOMContentLoaded', function(){
         '</head><body>\n'+
         '<iframe id="pv" src="'+url+'"></iframe>\n'+
         '<script>\n  var f=document.getElementById("pv");\n  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});\n  window.addEventListener("afterprint",function(){setTimeout(function(){window.close();},400);});\n<\/script>\n'+
-        '</body></html>');
+        '
+<!-- SMARTEL final minimal rebinder START -->
+<script>
+(function(){
+  function rebind(id, fn){
+    var old = document.getElementById(id);
+    if(!old) return;
+    try{ old.onclick = null; old.removeAttribute('onclick'); }catch(e){}
+    var btn = old.cloneNode(true);
+    old.parentNode.replaceChild(btn, old);
+    btn.addEventListener('click', fn);
+  }
+  if (typeof window.onPrintPDF==='function') rebind('printBtn', window.onPrintPDF);
+  if (typeof window.onSavePDF==='function')  rebind('saveBtn',  window.onSavePDF);
+  console.log('[SMARTEL] PDF handlers ready (generate_pdf)');
+})();
+</script>
+<!-- SMARTEL final minimal rebinder END -->
+
+</body>
+</html>');
       w.document.close();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
     }catch(e){ alert('PDF 생성 중 오류가 발생했습니다.'); console.error(e); }
@@ -1524,7 +1565,27 @@ async function onPrintPDF(e) {
     const w = window.open('about:blank','_blank','noopener,noreferrer');
     const doc = w.document;
     doc.open();
-    doc.write('<!doctype html><html><head><title>SMARTEL 신청서</title><meta charset="utf-8"></head><body style="margin:0;background:#111"></body></html>');
+    doc.write('<!doctype html><html><head><title>SMARTEL 신청서</title><meta charset="utf-8"></head><body style="margin:0;background:#111">
+<!-- SMARTEL final minimal rebinder START -->
+<script>
+(function(){
+  function rebind(id, fn){
+    var old = document.getElementById(id);
+    if(!old) return;
+    try{ old.onclick = null; old.removeAttribute('onclick'); }catch(e){}
+    var btn = old.cloneNode(true);
+    old.parentNode.replaceChild(btn, old);
+    btn.addEventListener('click', fn);
+  }
+  if (typeof window.onPrintPDF==='function') rebind('printBtn', window.onPrintPDF);
+  if (typeof window.onSavePDF==='function')  rebind('saveBtn',  window.onSavePDF);
+  console.log('[SMARTEL] PDF handlers ready (generate_pdf)');
+})();
+</script>
+<!-- SMARTEL final minimal rebinder END -->
+
+</body>
+</html>');
     doc.close();
 
     const iframe = doc.createElement('iframe');
