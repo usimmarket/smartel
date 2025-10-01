@@ -370,8 +370,7 @@ header .centered img.logo{ height: 46px !important; }
     // 그 외(file://, GitHub preview 등)에서는 절대 URL 사용
     return 'https://smartel.netlify.app' + REL;
   }
-</script>
-<script>
+
   /* === 서버에 PDF 생성 요청 === */
   async function generatePDFBlob() {
     const form = document.getElementById('form');
@@ -392,30 +391,61 @@ header .centered img.logo{ height: 46px !important; }
   async function onSavePDF(){
   try{
     var blob = await generatePDFBlob();
-    if(!(blob instanceof Blob)) { blob = new Blob([await (blob.arrayBuffer? blob.arrayBuffer(): blob)], {type:'application/pdf'}); }
+    if(!(blob instanceof Blob)){
+      if (blob && typeof blob.blob==='function') blob = await blob.blob();
+      else if (blob && blob.arrayBuffer) blob = new Blob([await blob.arrayBuffer()], {type:'application/pdf'});
+      else blob = new Blob([blob||''], {type:'application/pdf'});
+    }
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'smartel.pdf';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 600000);
-  }catch(e){ alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(e); }
+  }catch(e){
+    alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.');
+    console.error(e);
+  }
 }
 
   /* === 인쇄(뷰어만 열기; 시스템 인쇄창 자동 호출 없음) === */
   async function onPrintPDF(){
   try{
-    setHiddenBirth();
-    var yy = (qs('#card_exp_year')||{}).value||'';
-    var mm = (qs('#card_exp_month')||{}).value||'';
-    var apExp = qs('#autopay_exp'); if(apExp && yy && mm) apExp.value = yy+'/'+mm;
-    if(!runValidate()){ window.scrollTo({top:0, behavior:'smooth'}); return; }
+    setHiddenBirth && setHiddenBirth();
+    var yy = (document.querySelector('#card_exp_year')||{}).value||'';
+    var mm = (document.querySelector('#card_exp_month')||{}).value||'';
+    var ap = document.querySelector('#autopay_exp'); if(ap && yy && mm) ap.value = yy+'/'+mm;
+    if (typeof runValidate==='function' && !runValidate()){ window.scrollTo({top:0, behavior:'smooth'}); return; }
     var blob = await generatePDFBlob();
-    if(!(blob instanceof Blob)) { blob = new Blob([await (blob.arrayBuffer? blob.arrayBuffer(): blob)], {type:'application/pdf'}); }
+    if(!(blob instanceof Blob)){
+      if (blob && typeof blob.blob==='function') blob = await blob.blob();
+      else if (blob && blob.arrayBuffer) blob = new Blob([await blob.arrayBuffer()], {type:'application/pdf'});
+      else blob = new Blob([blob||''], {type:'application/pdf'});
+    }
     var url = URL.createObjectURL(blob);
-    var w = window.open(url, '_blank', 'noopener,noreferrer');
-    if(!w){ var a=document.createElement('a'); a.href=url; a.download='smartel.pdf'; document.body.appendChild(a); a.click(); a.remove(); }
+    var w = window.open('', '_blank', 'noopener,noreferrer');
+    if(!w){
+      var a=document.createElement('a'); a.href=url; a.download='smartel.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
+      return;
+    }
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title>' +
+      '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+      '</head><body>\n' +
+      '<iframe id="pv" src="'+url+'"></iframe>\n' +
+      '<script>\n' +
+      '  var f=document.getElementById("pv");\n' +
+      '  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});\n' +
+      '  window.addEventListener("afterprint",function(){setTimeout(function(){window.close();},400);});\n' +
+      '<\/script>\n' +
+      '</script>
+</body></html>');
+    w.document.close();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
-  }catch(e){ alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(e); }
+  }catch(e){
+    alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.');
+    console.error(e);
+  }
 }
 
   /* === 기존 버튼 id 그대로 사용 === */
@@ -624,8 +654,7 @@ header .centered img.logo{ height: 46px !important; }
     }, true);
   }
 })();
-</script>
-<script>
+
 /* 신규일 때는 통신사/번호이동 관련 필드를 FormData에서 제외(=disabled)하고 값도 비움.
    번호이동일 때만 다시 활성화. MVNO 선택 시에만 MVNO명 입력 활성화. */
 (function () {
@@ -682,11 +711,9 @@ header .centered img.logo{ height: 46px !important; }
   document.addEventListener('DOMContentLoaded', updateUI);
   updateUI();
 })();
-</script>
 
-<script>
 // Full I18N dictionary (legacy keys + Smartel new keys)
-const I18N = {
+window.I18N = window.I18N || {
   KR: {
     app_form:"가입신청서", partner_only:"판매점 전용",
     sec_plan:"요금제", plan:"요금제", sec_customer:"고객정보",
@@ -1197,8 +1224,7 @@ document.addEventListener('DOMContentLoaded', function(){
     return true;
   };
 
-</script> 
-<script>
+
 (function () {
   // 1) Netlify Functions 경로 (로컬 file:// 로 열었을 때도 동작하도록 절대경로 폴백)
   const FN_REL = '/.netlify/functions/generate_pdf';
@@ -1468,8 +1494,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cleanupLeak); else cleanupLeak();
   setTimeout(cleanupLeak, 800); // run once more after layout
 })();
-</script>
-<script>
+
 /* ===== SMARTEL: PDF 저장/인쇄 클라이언트 (고정 경로/메서드/에러표시) ===== */
 
 // 1) Netlify Functions endpoint — 반드시 generate_pdf 로 고정
@@ -1619,9 +1644,7 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('[SMARTEL] PDF handlers ready (generate_pdf)');
 });
 /* ===== /SMARTEL ===== */
-</script>
 
-<script>
 /* Autopay: bank/card toggle — make card fields truly optional for 'bank' */
 (function(){
   var els = {
@@ -1727,8 +1750,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // 2) 4분마다 한 번씩 얕게 핑(콜드 방지)
   setInterval(()=>{ fetch('./.netlify/functions/generate_pdf', { method:'POST', body: JSON.stringify({__warmup:true}) }).catch(()=>{}); }, 4*60*1000);
 })();
-</script>
-<script>
+
 (function(){
   // 1) print/save 버튼의 inline onclick 제거(있다면)
   var pb = document.getElementById('printBtn');
@@ -1760,8 +1782,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }, true);
 })();
-</script>
-<script>
+
 (function(){
   // 이미 페이지에 getPdfBlobGuaranteed 가 있으면 재사용, 없으면 캡처본 사용
   async function getPdfBlobGuaranteed(){
@@ -1831,6 +1852,22 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <!-- SMARTEL final minimal rebinder END -->
+
+
+<!-- SMARTEL minimal rebinder -->
+<script>(function(){
+  function rebind(id, fn){
+    var el = document.getElementById(id);
+    if(!el) return;
+    try{ el.onclick=null; el.removeAttribute('onclick'); }catch(e){}
+    var btn = el.cloneNode(true);
+    el.parentNode.replaceChild(btn, el);
+    btn.addEventListener('click', fn);
+  }
+  if (typeof window.onPrintPDF==='function') rebind('printBtn', window.onPrintPDF);
+  if (typeof window.onSavePDF==='function')  rebind('saveBtn',  window.onSavePDF);
+  console.log('[SMARTEL] PDF handlers ready (generate_pdf)');
+})();</script>
 
 </body>
 </html>
