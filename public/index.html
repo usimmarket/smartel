@@ -425,6 +425,12 @@ async function onPrintPDF(e){
   var f=document.getElementById("pv");
   f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
+<\/script>
+</script>
+</script>
+</script>
+</script>
+</body></html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
   }catch(e){ alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(e); }
@@ -1691,5 +1697,118 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 <!-- SMARTEL final minimal rebinder END -->
 
+
+<!-- SMARTEL minimal fix: robust Save/Print + bindings (no UI/translation changes) -->
+<script>
+(function(){
+  try{
+    // Utility
+    const qs  = (s, r=document)=>r.querySelector(s);
+    const qsa = (s, r=document)=>Array.from(r.querySelectorAll(s));
+    function bind(el, fn){
+      if(!el || !fn) return;
+      if(!el.__smartelGuarded){
+        el.__smartelGuarded = true;
+        el.addEventListener('click', function(ev){ ev.preventDefault(); try{ fn(ev); }catch(e){ console.error(e); } });
+      }
+    }
+
+    // 1) Safe PDF blob generator (use existing generatePDFBlob if present)
+    async function _collectPayload(){
+      try{
+        const form = qs('form') || document.body;
+        const fd = new FormData(form);
+        // add simple derived fields if exist
+        const payload = {};
+        fd.forEach((v,k)=>{ payload[k]=v; });
+        return payload;
+      }catch(e){ console.warn('[SMARTEL-fix] payload build failed:', e); return {}; }
+    }
+
+    async function getPdfBlobGuaranteed(){
+      if(typeof window.generatePDFBlob === 'function'){
+        const b = await window.generatePDFBlob();
+        if(b instanceof Blob) return b;
+        if(b && b.arrayBuffer) return new Blob([await b.arrayBuffer()], {type:'application/pdf'});
+        return new Blob([b||''], {type:'application/pdf'});
+      }else{
+        // fallback: call Netlify function directly
+        const body = await _collectPayload();
+        const resp = await fetch('/.netlify/functions/generate_pdf', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(body)
+        });
+        const ab = await resp.arrayBuffer();
+        return new Blob([ab], {type:'application/pdf'});
+      }
+    }
+
+    // 2) Handlers
+    async function onSavePDF(e){
+      try{
+        if(e && e.preventDefault) e.preventDefault();
+        const blob = await getPdfBlobGuaranteed();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 600000);
+      }catch(err){ alert('PDF 저장 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(err); }
+    }
+    async function onPrintPDF(e){
+      try{
+        if(e && e.preventDefault) e.preventDefault();
+        const blob = await getPdfBlobGuaranteed();
+        const url = URL.createObjectURL(blob);
+        const w = window.open('', '_blank', 'noopener,noreferrer');
+        if(!w){
+          const a=document.createElement('a'); a.href=url; a.download='smartel.pdf';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=>URL.revokeObjectURL(url), 600000);
+          return;
+        }
+        w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title>
+<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
+</head><body>
+<iframe id="pv" src="${url}"></iframe>
+<script>
+  var f=document.getElementById("pv");
+  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
+  window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
+<\/script>
+</body></html>`);
+        w.document.close();
+        setTimeout(()=>URL.revokeObjectURL(url), 600000);
+      }catch(err){ alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(err); }
+    }
+
+    // expose (without touching existing globals if they already exist)
+    if(typeof window.onSavePDF !== 'function')  window.onSavePDF  = onSavePDF;
+    if(typeof window.onPrintPDF !== 'function') window.onPrintPDF = onPrintPDF;
+
+    // 3) Bind buttons (IDs preferred; fallback by visible text)
+    const saveBtn  = qs('#saveBtn');
+    const printBtn = qs('#printBtn');
+    bind(saveBtn,  window.onSavePDF);
+    bind(printBtn, window.onPrintPDF);
+
+    if(!saveBtn){
+      qsa('button, a').forEach(function(b){
+        const t = (b.textContent||'').trim();
+        if(/^(PDF 저장|Save PDF)$/i.test(t)) bind(b, window.onSavePDF);
+      });
+    }
+    if(!printBtn){
+      qsa('button, a').forEach(function(b){
+        const t = (b.textContent||'').trim();
+        if(/^(인쇄|Print)$/i.test(t)) bind(b, window.onPrintPDF);
+      });
+    }
+
+    console.log('[SMARTEL-fix] handlers ensured (save/print).');
+  }catch(e){ console.error('[SMARTEL-fix] bootstrap failed:', e); }
+})();
+</script>
 </body>
 </html>
