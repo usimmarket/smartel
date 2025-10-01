@@ -706,7 +706,7 @@ header .centered img.logo{ height: 46px !important; }
 
 <script>
 // Full I18N dictionary (legacy keys + Smartel new keys)
-const I18N = {
+var I18N = window.I18N || {
   KR: {
     app_form:"가입신청서", partner_only:"판매점 전용",
     sec_plan:"요금제", plan:"요금제", sec_customer:"고객정보",
@@ -1319,7 +1319,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
     </head><body>
       <iframe id="pv" src="${url}"></iframe>
-</script>
       <script>
         const f = document.getElementById('pv');
         f.addEventListener('load', () => {
@@ -1841,5 +1840,6 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 <!-- SMARTEL minimal print/save rebinder END -->
 
+</script>
 </body>
 </html>
