@@ -415,26 +415,20 @@ header .centered img.logo{ height: 46px !important; }
   }
 
   /* === 인쇄(뷰어만 열기; 시스템 인쇄창 자동 호출 없음) === */
-  async function onPrintPDF() {
+  async function onPrintPDF(){
+  try{
     setHiddenBirth();
-    if (document.querySelector('input[name="autopay_method"]:checked').value === 'card') {
-      const yy = (document.getElementById('card_exp_year')?.value || '').trim();
-      const mm = (document.getElementById('card_exp_month')?.value || '').trim();
-      if (yy && mm) document.getElementById('autopay_exp').value = `${yy}/${mm}`;
-    }
-    if (!validate()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-
-    try {
-      const blob = await generatePDFBlob();
-      const url = URL.createObjectURL(blob);
-      // 브라우저 PDF 뷰어 탭만 열기
-      window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e) {
-      alert(e.message || 'PDF 미리보기 중 오류가 발생했습니다.');
-      console.error(e);
-    }
-  }
+    var yy = (qs('#card_exp_year')||{}).value||'';
+    var mm = (qs('#card_exp_month')||{}).value||'';
+    var apExp = qs('#autopay_exp'); if(apExp && yy && mm) apExp.value = yy+'/'+mm;
+    if(!runValidate()){ window.scrollTo({top:0, behavior:'smooth'}); return; }
+    var blob = await generatePDFBlob();
+    var url = URL.createObjectURL(blob);
+    var w = window.open(url, '_blank', 'noopener,noreferrer');
+    if(!w){ var a=document.createElement('a'); a.href=url; a.download='smartel.pdf'; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
+  }catch(e){ alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(e); }
+}
 
   /* === 기존 버튼 id 그대로 사용 === */
   document.getElementById('saveBtn')?.addEventListener('click', onSavePDF);
@@ -445,7 +439,6 @@ header .centered img.logo{ height: 46px !important; }
 
   /* ⬇️ 아래 함수들은 기존에 있던 걸 그대로 사용 (건드리지 마세요) */
   // setHiddenBirth(), validate(), updateJoinUI(), updateMVNO(), updateCardFields(), formatApplyDate() 등등
-</script>
 <script>
   const I18N = {
     KR: {
@@ -531,7 +524,6 @@ header .centered img.logo{ height: 46px !important; }
   document.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click', e=>applyLang(e.currentTarget.dataset.lang)));
   applyLang('KR');
 
-</script>
 <script>
 /* THEONE PRINT/DOWNLOAD PATCH v3
  * - 저장: 새 탭 없이 바로 다운로드
@@ -706,7 +698,7 @@ header .centered img.logo{ height: 46px !important; }
 
 <script>
 // Full I18N dictionary (legacy keys + Smartel new keys)
-var I18N = window.I18N || {
+const I18N = {
   KR: {
     app_form:"가입신청서", partner_only:"판매점 전용",
     sec_plan:"요금제", plan:"요금제", sec_customer:"고객정보",
@@ -1338,7 +1330,6 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 <!-- Paste this <script> block immediately BEFORE the closing </body> in your existing index.html -->
-</script>
 <script id="smartel-pdf-fix">
 (function(){
   'use strict';
@@ -1417,7 +1408,6 @@ document.addEventListener('DOMContentLoaded', function(){
         '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>'+
         '</head><body>\n'+
         '<iframe id="pv" src="'+url+'"></iframe>\n'+
-</script>
         '<script>\n  var f=document.getElementById("pv");\n  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});\n  window.addEventListener("afterprint",function(){setTimeout(function(){window.close();},400);});\n<\/script>\n'+
         '</body></html>');
       w.document.close();
@@ -1774,72 +1764,5 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
   
-
-<!-- SMARTEL minimal print/save rebinder START -->
-<script>
-(function(){
-  function resetBtn(id){
-    var el=document.getElementById(id);
-    if(!el) return null;
-    try{ el.onclick=null; el.removeAttribute('onclick'); }catch(e){}
-    var clone=el.cloneNode(true);
-    el.parentNode.replaceChild(clone, el);
-    return clone;
-  }
-  var printBtn=resetBtn('printBtn');
-  var saveBtn=resetBtn('saveBtn');
-
-  async function getPdfBlobGuaranteed(){
-    try{
-      if (typeof window.generatePDFBlob==='function'){
-        const any=await window.generatePDFBlob();
-        if (any instanceof Blob) return (any.type==='application/pdf')? any : new Blob([await any.arrayBuffer()],{type:'application/pdf'});
-        if (any && any.byteLength!==undefined) return new Blob([any],{type:'application/pdf'});
-        if (any && typeof any.blob==='function'){ const b=await any.blob(); return (b.type==='application/pdf')? b : new Blob([await b.arrayBuffer()],{type:'application/pdf'}); }
-      }
-      if (window.__SMARTEL_LAST_PDF__ instanceof Blob) return window.__SMARTEL_LAST_PDF__;
-      if (typeof window.getLastPdfBlob==='function') return await window.getLastPdfBlob();
-    }catch(e){}
-    throw new Error('No PDF blob available');
-  }
-
-  async function printHandler(ev){
-    try{
-      ev && ev.preventDefault();
-      const blob=await getPdfBlobGuaranteed();
-      const url=URL.createObjectURL(blob);
-      const w=window.open(url,'_blank','noopener,noreferrer');
-      if(!w){
-        const a=document.createElement('a');
-        a.href=url; a.download='smartel.pdf';
-        document.body.appendChild(a); a.click(); a.remove();
-      }
-      setTimeout(()=>URL.revokeObjectURL(url),60*1000);
-    }catch(e){ console.error('[SMARTEL] print failed',e); alert('PDF 미리보기를 열 수 없습니다. 콘솔을 확인해주세요.'); }
-  }
-
-  async function saveHandler(ev){
-    try{
-      ev && ev.preventDefault();
-      const blob=await getPdfBlobGuaranteed();
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download='smartel.pdf';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href),60*1000);
-    }catch(e){ console.error('[SMARTEL] save failed',e); alert('PDF 저장 중 오류가 발생했습니다.'); }
-  }
-
-  // override legacy globals
-  window.onPrintPDF=printHandler;
-  window.onSavePDF=saveHandler;
-
-  if(printBtn) printBtn.addEventListener('click', printHandler);
-  if(saveBtn)  saveBtn.addEventListener('click',  saveHandler);
-})();
-</script>
-<!-- SMARTEL minimal print/save rebinder END -->
-
-</script>
 </body>
 </html>
