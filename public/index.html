@@ -426,6 +426,10 @@ async function onPrintPDF(e){
   f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 <\/script>
+</script>
+</script>
+</script>
+</script>
 </body></html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
@@ -702,7 +706,7 @@ async function onPrintPDF(e){
 })();
 
 // Full I18N dictionary (legacy keys + Smartel new keys)
-const I18N = {
+window.I18N = window.I18N || {
   KR: {
     app_form:"가입신청서", partner_only:"판매점 전용",
     sec_plan:"요금제", plan:"요금제", sec_customer:"고객정보",
