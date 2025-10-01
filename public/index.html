@@ -426,10 +426,6 @@ async function onPrintPDF(e){
   f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 <\/script>
-</script>
-</script>
-</script>
-</script>
 </body></html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
