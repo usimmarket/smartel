@@ -896,6 +896,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
 
+</script>
 <script id="i18n-autowrap">
 (function(){
   function ensureSpan(label, key){
@@ -1308,50 +1309,19 @@ document.addEventListener('DOMContentLoaded', function(){
   // 인쇄: 인쇄 대화상자만 띄우고 웹페이지 인쇄는 막음
   bind('printBtn', ['인쇄','Print'], async (blob)=>{
     const url = URL.createObjectURL(blob);
-    const w = window.open('', '_blank');
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title>
       <style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
     </head><body>
       <iframe id="pv" src="${url}"></iframe>
-<script id="smartel-pdf-fix">
-(function(){
-  'use strict';
-  // --- 1) Robust Netlify Function URL (works both on Netlify and when opening file:// locally)
-  var FN_REL = '/.netlify/functions/generate_pdf';
-  var FN_ABS = 'https://smartel.netlify.app/.netlify/functions/generate_pdf'; // change if your site domain differs
-  function apiUrl(){ return (location.protocol.indexOf('http') === 0) ? FN_REL : FN_ABS; }
-
-  // --- 2) Helpers -----------------------------------------------------------
-  function qs(sel){ return document.querySelector(sel); }
-  function qsa(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
-  function onlyDigits(el){ if(!el) return; el.addEventListener('input', function(){ el.value = el.value.replace(/\D+/g,''); }); }
-
-  // ensure apply date (today) appears
-  function formatApplyDate(d){
-    var y=d.getFullYear(), m=d.getMonth()+1, dd=('0'+d.getDate()).slice(-2);
-    return '신청일자 '+y+'년 '+m+'월 '+dd+'일';
-  }
-  try { var ad=qs('#apply_date'); if(ad && !ad.value) ad.value = formatApplyDate(new Date()); }catch(_){/*noop*/}
-
-  // keep birth hidden field in sync (if that field exists in your form)
-  function setHiddenBirth(){ var raw = (qs('#birth_in')||{}).value||''; var h=qs('#birth'); if(h) h.value = raw.replace(/\D/g,''); }
-
-  // toggle card expiry fields (uses existing markup if present)
-  function updateCardFields(){
-    var methodEl = qs('input[name="autopay_method"]:checked');
-    var isCard = methodEl && methodEl.value === 'card';
-    var cf = qs('#card_fields'); if(cf) cf.style.display = isCard ? 'block' : 'none';
-  }
-  qsa('input[name="autopay_method"]').forEach(function(r){ r.addEventListener('change', updateCardFields); });
-  updateCardFields();
-
-  // numeric sanitizers for common fields (safe no-ops if missing)
-  ['birth_in','subscriber_phone','wish4','port_number','autopay_birth','autopay_number','card_exp_year','card_exp_month','sim_serial']
-    .forEach(function(id){ onlyDigits(qs('#'+id)); });
-
-  // --- 3) PDF generation via Netlify Function ------------------------------
-  async function generatePDFBlob(){
-    var form = qs('#form') || qs('form');
+<script>
+  var f=document.getElementById("pv");
+  f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
+  window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
+<\/script>
+    </body></html>`);
+    w.document.close();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
+  });
     if(!form) throw new Error('form not found');
     var data = Object.fromEntries(new FormData(form).entries());
     var resp = await fetch(apiUrl(), { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
