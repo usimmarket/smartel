@@ -422,11 +422,12 @@ async function onPrintPDF(e){
 <style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
 </head><body>
 <iframe id="pv" src="${url}"></iframe>
-  var f=document.getElementById("pv");
+<script>
+    var f=document.getElementById("pv");
   f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 
-</script>
+<\/script>
 </body></html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
@@ -1312,26 +1313,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>
     </head><body>
       <iframe id="pv" src="${url}"></iframe>
-      <script>
-        const f = document.getElementById('pv');
-        f.addEventListener('load', () => {
-          try { f.contentWindow.focus(); f.contentWindow.print(); }
-          catch(e){ window.focus(); window.print(); }
-        });
-        window.addEventListener('afterprint', () => setTimeout(()=>window.close(), 400));
-<\/script>
-<\/script>
-</body></html>`);
-    w.document.close();
-    setTimeout(()=>URL.revokeObjectURL(url), 600000);
-  });
-
-  // 초기화는 그대로
-  const resetBtn = byIdOrText('resetBtn', ['초기화','Reset']);
-  if (resetBtn) resetBtn.addEventListener('click', ()=> document.getElementById('form')?.reset());
-})();
-</script>
-<!-- Paste this <script> block immediately BEFORE the closing </body> in your existing index.html -->
 <script id="smartel-pdf-fix">
 (function(){
   'use strict';
