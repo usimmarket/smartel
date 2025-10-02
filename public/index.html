@@ -1322,11 +1322,22 @@ document.addEventListener('DOMContentLoaded', function(){
     w.document.close();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
   });
-    if(!form) throw new Error('form not found');
-    var data = Object.fromEntries(new FormData(form).entries());
-    var resp = await fetch(apiUrl(), { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
-    if(!resp.ok) throw new Error('PDF generate failed: '+resp.status);
-    return await resp.blob();
+async function generatePDFBlob(){
+  const form = document.querySelector('form');
+  if (!form) throw new Error('form not found');
+
+  const data = Object.fromEntries(new FormData(form).entries());
+  const resp = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  if (!resp.ok) {
+    const msg = await resp.text().catch(()=> '');
+    throw new Error(`PDF generate failed: ${resp.status} ${msg}`);
+  }
+  return await resp.blob();
   }
 
   // use page's own validate() if present; otherwise always pass
