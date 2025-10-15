@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 
 <html lang="ko">
@@ -1600,26 +1601,57 @@ window.addEventListener('DOMContentLoaded', () => {
     throw new Error('No PDF blob available');
   }
 
-  function openPreferNewTab(blob){
+  
+  // Reliable popup+iframe auto-print
+  function openPrintPopup(){
+    return window.open('', 'pdf-preview', 'noopener');
+  }
+  async function openAndAutoPrint(blob){
     if (!blob || !blob.size) throw new Error('Empty PDF blob');
     const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank', 'noopener,noreferrer');
-    // 팝업 차단된 경우에만 다운로드 폴백
-    if (!w) {
+    const w = openPrintPopup();
+    if (!w){
       const a = document.createElement('a');
       a.href = url; a.download = 'smartel.pdf';
       document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
+      return;
+    }
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+                 '</head><body>' +
+                 '<iframe id="pv" allow="fullscreen"></iframe>' +
+                 '<script>' +
+                 'var f=document.getElementById("pv");' +
+                 'f.addEventListener("load",function(){' +
+                 '  try{ (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
+                 '  catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
+                 '});' +
+                 'window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
+                 '<\/script>' +
+                 '</body></html>';
+    try{
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.document.getElementById('pv').src = url;
+    }catch(e){
+      try{ w.location.href = url; }catch(_){}
     }
     setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
   }
 
-  // 인쇄 = 열기 우선, 팝업 차단 시에만 다운로드
   window.onPrintPDF = async function(ev){
     try{
       ev && ev.preventDefault();
       const blob = await getPdfBlobGuaranteed();
-      openPreferNewTab(blob);
+      await openAndAutoPrint(blob);
     }catch(e){
+      console.error('[SMARTEL] print failed', e);
+      alert('PDF 인쇄를 열 수 없습니다. 콘솔을 확인해주세요.');
+    }
+  };
+catch(e){
       console.error('[SMARTEL] print failed', e);
       alert('PDF 미리보기를 열 수 없습니다. 콘솔을 확인해주세요.');
     }
