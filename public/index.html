@@ -429,6 +429,120 @@ async function onPrintPDF(e){
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 
 <\/script>
+
+<script id="smartel-print-helper">
+(function(){
+  'use strict';
+  if (window.__SMARTEL_PRINT_PATCHED__) return;
+  window.__SMARTEL_PRINT_PATCHED__ = true;
+
+  let printing = false;
+  let popupRef = null;
+
+  function getOrOpenPopup(){
+    try {
+      if (popupRef && !popupRef.closed) return popupRef;
+    } catch(_){}
+    popupRef = window.open('', 'smartel-print', 'noopener,width=1024,height=768');
+    return popupRef;
+  }
+
+  function writePopupShell(w){
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+                 '</head><body>' +
+                 '<iframe id="pv" type="application/pdf" allow="fullscreen"></iframe>' +
+                 '<script>' +
+                 '  const f = document.getElementById("pv");' +
+                 '  f.addEventListener("load", function(){' +
+                 '    try { (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
+                 '    catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
+                 '  });' +
+                 '  window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
+                 '<\/script>' +
+                 '</body></html>';
+    try {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch(e){
+      console.error('[SMARTEL:print] failed to write popup shell', e);
+    }
+  }
+
+  async function ensurePdfBlob(){
+    if (typeof window.generatePDFBlob === 'function'){
+      const out = await window.generatePDFBlob();
+      if (out instanceof Blob) return out;
+      if (out && typeof out.arrayBuffer === 'function'){
+        return new Blob([await out.arrayBuffer()], {type:'application/pdf'});
+      }
+    }
+    if (window.__lastPdfBlob instanceof Blob) return window.__lastPdfBlob;
+    throw new Error('No PDF blob available');
+  }
+
+  async function smartelPrint(ev){
+    try{
+      if (ev && typeof ev.preventDefault==='function') ev.preventDefault();
+      if (printing) return;
+      printing = true;
+
+      const blob = await ensurePdfBlob();
+      if (!(blob instanceof Blob) || !blob.size) throw new Error('Empty PDF blob');
+
+      const url = URL.createObjectURL(blob);
+      const w = getOrOpenPopup();
+      if (!w){
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel_form.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+        printing = false;
+        return;
+      }
+      try{
+        if (!w.document || !w.document.getElementById('pv')) writePopupShell(w);
+      }catch(_){
+        writePopupShell(w);
+      }
+
+      try {
+        const iframe = w.document.getElementById('pv');
+        iframe.src = url;
+      } catch(e){
+        console.warn('[SMARTEL:print] iframe injection fallback', e);
+        try { w.location.href = url; } catch(_){}
+      }
+
+      setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+      setTimeout(()=>{ printing = false; }, 1500);
+    } catch(err){
+      printing = false;
+      console.error('[SMARTEL:print] error', err);
+      alert('인쇄 중 오류가 발생했습니다. 브라우저 콘솔을 확인해주세요.');
+    }
+  }
+
+  function rebindPrintButton(){
+    const btn = document.getElementById('printBtn') || document.querySelector('[data-role="print"], .btn-print');
+    if (!btn) return;
+    try { btn.onclick = null; btn.removeAttribute('onclick'); } catch(_){}
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', smartelPrint, { once: false });
+  }
+
+  window.onPrintPDF = smartelPrint;
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', rebindPrintButton, { once: true });
+  } else {
+    rebindPrintButton();
+  }
+})();
+</script>
+
 </body></html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
@@ -1319,7 +1433,121 @@ document.addEventListener('DOMContentLoaded', function(){
   f.addEventListener("load",function(){try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.focus();window.print();}});
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 <\/script>
-    </body></html>`);
+    
+<script id="smartel-print-helper">
+(function(){
+  'use strict';
+  if (window.__SMARTEL_PRINT_PATCHED__) return;
+  window.__SMARTEL_PRINT_PATCHED__ = true;
+
+  let printing = false;
+  let popupRef = null;
+
+  function getOrOpenPopup(){
+    try {
+      if (popupRef && !popupRef.closed) return popupRef;
+    } catch(_){}
+    popupRef = window.open('', 'smartel-print', 'noopener,width=1024,height=768');
+    return popupRef;
+  }
+
+  function writePopupShell(w){
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+                 '</head><body>' +
+                 '<iframe id="pv" type="application/pdf" allow="fullscreen"></iframe>' +
+                 '<script>' +
+                 '  const f = document.getElementById("pv");' +
+                 '  f.addEventListener("load", function(){' +
+                 '    try { (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
+                 '    catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
+                 '  });' +
+                 '  window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
+                 '<\/script>' +
+                 '</body></html>';
+    try {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch(e){
+      console.error('[SMARTEL:print] failed to write popup shell', e);
+    }
+  }
+
+  async function ensurePdfBlob(){
+    if (typeof window.generatePDFBlob === 'function'){
+      const out = await window.generatePDFBlob();
+      if (out instanceof Blob) return out;
+      if (out && typeof out.arrayBuffer === 'function'){
+        return new Blob([await out.arrayBuffer()], {type:'application/pdf'});
+      }
+    }
+    if (window.__lastPdfBlob instanceof Blob) return window.__lastPdfBlob;
+    throw new Error('No PDF blob available');
+  }
+
+  async function smartelPrint(ev){
+    try{
+      if (ev && typeof ev.preventDefault==='function') ev.preventDefault();
+      if (printing) return;
+      printing = true;
+
+      const blob = await ensurePdfBlob();
+      if (!(blob instanceof Blob) || !blob.size) throw new Error('Empty PDF blob');
+
+      const url = URL.createObjectURL(blob);
+      const w = getOrOpenPopup();
+      if (!w){
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel_form.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+        printing = false;
+        return;
+      }
+      try{
+        if (!w.document || !w.document.getElementById('pv')) writePopupShell(w);
+      }catch(_){
+        writePopupShell(w);
+      }
+
+      try {
+        const iframe = w.document.getElementById('pv');
+        iframe.src = url;
+      } catch(e){
+        console.warn('[SMARTEL:print] iframe injection fallback', e);
+        try { w.location.href = url; } catch(_){}
+      }
+
+      setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+      setTimeout(()=>{ printing = false; }, 1500);
+    } catch(err){
+      printing = false;
+      console.error('[SMARTEL:print] error', err);
+      alert('인쇄 중 오류가 발생했습니다. 브라우저 콘솔을 확인해주세요.');
+    }
+  }
+
+  function rebindPrintButton(){
+    const btn = document.getElementById('printBtn') || document.querySelector('[data-role="print"], .btn-print');
+    if (!btn) return;
+    try { btn.onclick = null; btn.removeAttribute('onclick'); } catch(_){}
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', smartelPrint, { once: false });
+  }
+
+  window.onPrintPDF = smartelPrint;
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', rebindPrintButton, { once: true });
+  } else {
+    rebindPrintButton();
+  }
+})();
+</script>
+
+</body></html>`);
     w.document.close();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
   });
@@ -1601,57 +1829,26 @@ window.addEventListener('DOMContentLoaded', () => {
     throw new Error('No PDF blob available');
   }
 
-  
-  // Reliable popup+iframe auto-print
-  function openPrintPopup(){
-    return window.open('', 'pdf-preview', 'noopener');
-  }
-  async function openAndAutoPrint(blob){
+  function openPreferNewTab(blob){
     if (!blob || !blob.size) throw new Error('Empty PDF blob');
     const url = URL.createObjectURL(blob);
-    const w = openPrintPopup();
-    if (!w){
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    // 팝업 차단된 경우에만 다운로드 폴백
+    if (!w) {
       const a = document.createElement('a');
       a.href = url; a.download = 'smartel.pdf';
       document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
-      return;
-    }
-    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
-                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
-                 '</head><body>' +
-                 '<iframe id="pv" allow="fullscreen"></iframe>' +
-                 '<script>' +
-                 'var f=document.getElementById("pv");' +
-                 'f.addEventListener("load",function(){' +
-                 '  try{ (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
-                 '  catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
-                 '});' +
-                 'window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
-                 '<\/script>' +
-                 '</body></html>';
-    try{
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-      w.document.getElementById('pv').src = url;
-    }catch(e){
-      try{ w.location.href = url; }catch(_){}
     }
     setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
   }
 
+  // 인쇄 = 열기 우선, 팝업 차단 시에만 다운로드
   window.onPrintPDF = async function(ev){
     try{
       ev && ev.preventDefault();
       const blob = await getPdfBlobGuaranteed();
-      await openAndAutoPrint(blob);
+      openPreferNewTab(blob);
     }catch(e){
-      console.error('[SMARTEL] print failed', e);
-      alert('PDF 인쇄를 열 수 없습니다. 콘솔을 확인해주세요.');
-    }
-  };
-catch(e){
       console.error('[SMARTEL] print failed', e);
       alert('PDF 미리보기를 열 수 없습니다. 콘솔을 확인해주세요.');
     }
@@ -1769,6 +1966,120 @@ catch(e){
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 <\/script>
 <\/script>
+
+<script id="smartel-print-helper">
+(function(){
+  'use strict';
+  if (window.__SMARTEL_PRINT_PATCHED__) return;
+  window.__SMARTEL_PRINT_PATCHED__ = true;
+
+  let printing = false;
+  let popupRef = null;
+
+  function getOrOpenPopup(){
+    try {
+      if (popupRef && !popupRef.closed) return popupRef;
+    } catch(_){}
+    popupRef = window.open('', 'smartel-print', 'noopener,width=1024,height=768');
+    return popupRef;
+  }
+
+  function writePopupShell(w){
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+                 '</head><body>' +
+                 '<iframe id="pv" type="application/pdf" allow="fullscreen"></iframe>' +
+                 '<script>' +
+                 '  const f = document.getElementById("pv");' +
+                 '  f.addEventListener("load", function(){' +
+                 '    try { (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
+                 '    catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
+                 '  });' +
+                 '  window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
+                 '<\/script>' +
+                 '</body></html>';
+    try {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch(e){
+      console.error('[SMARTEL:print] failed to write popup shell', e);
+    }
+  }
+
+  async function ensurePdfBlob(){
+    if (typeof window.generatePDFBlob === 'function'){
+      const out = await window.generatePDFBlob();
+      if (out instanceof Blob) return out;
+      if (out && typeof out.arrayBuffer === 'function'){
+        return new Blob([await out.arrayBuffer()], {type:'application/pdf'});
+      }
+    }
+    if (window.__lastPdfBlob instanceof Blob) return window.__lastPdfBlob;
+    throw new Error('No PDF blob available');
+  }
+
+  async function smartelPrint(ev){
+    try{
+      if (ev && typeof ev.preventDefault==='function') ev.preventDefault();
+      if (printing) return;
+      printing = true;
+
+      const blob = await ensurePdfBlob();
+      if (!(blob instanceof Blob) || !blob.size) throw new Error('Empty PDF blob');
+
+      const url = URL.createObjectURL(blob);
+      const w = getOrOpenPopup();
+      if (!w){
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel_form.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+        printing = false;
+        return;
+      }
+      try{
+        if (!w.document || !w.document.getElementById('pv')) writePopupShell(w);
+      }catch(_){
+        writePopupShell(w);
+      }
+
+      try {
+        const iframe = w.document.getElementById('pv');
+        iframe.src = url;
+      } catch(e){
+        console.warn('[SMARTEL:print] iframe injection fallback', e);
+        try { w.location.href = url; } catch(_){}
+      }
+
+      setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+      setTimeout(()=>{ printing = false; }, 1500);
+    } catch(err){
+      printing = false;
+      console.error('[SMARTEL:print] error', err);
+      alert('인쇄 중 오류가 발생했습니다. 브라우저 콘솔을 확인해주세요.');
+    }
+  }
+
+  function rebindPrintButton(){
+    const btn = document.getElementById('printBtn') || document.querySelector('[data-role="print"], .btn-print');
+    if (!btn) return;
+    try { btn.onclick = null; btn.removeAttribute('onclick'); } catch(_){}
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', smartelPrint, { once: false });
+  }
+
+  window.onPrintPDF = smartelPrint;
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', rebindPrintButton, { once: true });
+  } else {
+    rebindPrintButton();
+  }
+})();
+</script>
+
 </body></html>`);
         w.document.close();
         setTimeout(()=>URL.revokeObjectURL(url), 600000);
@@ -1849,7 +2160,121 @@ catch(e){
           var url = URL.createObjectURL(blob);
           var w = window.open('', '_blank');
           if(!w){ alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); return; }
-          w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title></head><body style="margin:0"><iframe src="'+url+'" style="border:0;width:100vw;height:100vh"></iframe></body></html>');
+          w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>SMARTEL 신청서</title></head><body style="margin:0"><iframe src="'+url+'" style="border:0;width:100vw;height:100vh"></iframe>
+<script id="smartel-print-helper">
+(function(){
+  'use strict';
+  if (window.__SMARTEL_PRINT_PATCHED__) return;
+  window.__SMARTEL_PRINT_PATCHED__ = true;
+
+  let printing = false;
+  let popupRef = null;
+
+  function getOrOpenPopup(){
+    try {
+      if (popupRef && !popupRef.closed) return popupRef;
+    } catch(_){}
+    popupRef = window.open('', 'smartel-print', 'noopener,width=1024,height=768');
+    return popupRef;
+  }
+
+  function writePopupShell(w){
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+                 '</head><body>' +
+                 '<iframe id="pv" type="application/pdf" allow="fullscreen"></iframe>' +
+                 '<script>' +
+                 '  const f = document.getElementById("pv");' +
+                 '  f.addEventListener("load", function(){' +
+                 '    try { (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
+                 '    catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
+                 '  });' +
+                 '  window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
+                 '<\/script>' +
+                 '</body></html>';
+    try {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch(e){
+      console.error('[SMARTEL:print] failed to write popup shell', e);
+    }
+  }
+
+  async function ensurePdfBlob(){
+    if (typeof window.generatePDFBlob === 'function'){
+      const out = await window.generatePDFBlob();
+      if (out instanceof Blob) return out;
+      if (out && typeof out.arrayBuffer === 'function'){
+        return new Blob([await out.arrayBuffer()], {type:'application/pdf'});
+      }
+    }
+    if (window.__lastPdfBlob instanceof Blob) return window.__lastPdfBlob;
+    throw new Error('No PDF blob available');
+  }
+
+  async function smartelPrint(ev){
+    try{
+      if (ev && typeof ev.preventDefault==='function') ev.preventDefault();
+      if (printing) return;
+      printing = true;
+
+      const blob = await ensurePdfBlob();
+      if (!(blob instanceof Blob) || !blob.size) throw new Error('Empty PDF blob');
+
+      const url = URL.createObjectURL(blob);
+      const w = getOrOpenPopup();
+      if (!w){
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel_form.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+        printing = false;
+        return;
+      }
+      try{
+        if (!w.document || !w.document.getElementById('pv')) writePopupShell(w);
+      }catch(_){
+        writePopupShell(w);
+      }
+
+      try {
+        const iframe = w.document.getElementById('pv');
+        iframe.src = url;
+      } catch(e){
+        console.warn('[SMARTEL:print] iframe injection fallback', e);
+        try { w.location.href = url; } catch(_){}
+      }
+
+      setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+      setTimeout(()=>{ printing = false; }, 1500);
+    } catch(err){
+      printing = false;
+      console.error('[SMARTEL:print] error', err);
+      alert('인쇄 중 오류가 발생했습니다. 브라우저 콘솔을 확인해주세요.');
+    }
+  }
+
+  function rebindPrintButton(){
+    const btn = document.getElementById('printBtn') || document.querySelector('[data-role="print"], .btn-print');
+    if (!btn) return;
+    try { btn.onclick = null; btn.removeAttribute('onclick'); } catch(_){}
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', smartelPrint, { once: false });
+  }
+
+  window.onPrintPDF = smartelPrint;
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', rebindPrintButton, { once: true });
+  } else {
+    rebindPrintButton();
+  }
+})();
+</script>
+
+</body></html>');
           w.document.close();
           setTimeout(function(){ try{ w.focus(); w.print(); }catch(_){} }, 800);
           setTimeout(function(){ URL.revokeObjectURL(url); }, 600000);
@@ -1887,5 +2312,119 @@ catch(e){
   });
 })();
 </script>
+
+<script id="smartel-print-helper">
+(function(){
+  'use strict';
+  if (window.__SMARTEL_PRINT_PATCHED__) return;
+  window.__SMARTEL_PRINT_PATCHED__ = true;
+
+  let printing = false;
+  let popupRef = null;
+
+  function getOrOpenPopup(){
+    try {
+      if (popupRef && !popupRef.closed) return popupRef;
+    } catch(_){}
+    popupRef = window.open('', 'smartel-print', 'noopener,width=1024,height=768');
+    return popupRef;
+  }
+
+  function writePopupShell(w){
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                 '<style>html,body{margin:0;height:100%}iframe{border:0;width:100vw;height:100vh}</style>' +
+                 '</head><body>' +
+                 '<iframe id="pv" type="application/pdf" allow="fullscreen"></iframe>' +
+                 '<script>' +
+                 '  const f = document.getElementById("pv");' +
+                 '  f.addEventListener("load", function(){' +
+                 '    try { (f.contentWindow||window).focus(); (f.contentWindow||window).print(); }' +
+                 '    catch(e){ try{ window.focus(); window.print(); }catch(_e){} }' +
+                 '  });' +
+                 '  window.addEventListener("afterprint", function(){ setTimeout(function(){ window.close(); }, 400); });' +
+                 '<\/script>' +
+                 '</body></html>';
+    try {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch(e){
+      console.error('[SMARTEL:print] failed to write popup shell', e);
+    }
+  }
+
+  async function ensurePdfBlob(){
+    if (typeof window.generatePDFBlob === 'function'){
+      const out = await window.generatePDFBlob();
+      if (out instanceof Blob) return out;
+      if (out && typeof out.arrayBuffer === 'function'){
+        return new Blob([await out.arrayBuffer()], {type:'application/pdf'});
+      }
+    }
+    if (window.__lastPdfBlob instanceof Blob) return window.__lastPdfBlob;
+    throw new Error('No PDF blob available');
+  }
+
+  async function smartelPrint(ev){
+    try{
+      if (ev && typeof ev.preventDefault==='function') ev.preventDefault();
+      if (printing) return;
+      printing = true;
+
+      const blob = await ensurePdfBlob();
+      if (!(blob instanceof Blob) || !blob.size) throw new Error('Empty PDF blob');
+
+      const url = URL.createObjectURL(blob);
+      const w = getOrOpenPopup();
+      if (!w){
+        const a = document.createElement('a');
+        a.href = url; a.download = 'smartel_form.pdf';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+        printing = false;
+        return;
+      }
+      try{
+        if (!w.document || !w.document.getElementById('pv')) writePopupShell(w);
+      }catch(_){
+        writePopupShell(w);
+      }
+
+      try {
+        const iframe = w.document.getElementById('pv');
+        iframe.src = url;
+      } catch(e){
+        console.warn('[SMARTEL:print] iframe injection fallback', e);
+        try { w.location.href = url; } catch(_){}
+      }
+
+      setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+      setTimeout(()=>{ printing = false; }, 1500);
+    } catch(err){
+      printing = false;
+      console.error('[SMARTEL:print] error', err);
+      alert('인쇄 중 오류가 발생했습니다. 브라우저 콘솔을 확인해주세요.');
+    }
+  }
+
+  function rebindPrintButton(){
+    const btn = document.getElementById('printBtn') || document.querySelector('[data-role="print"], .btn-print');
+    if (!btn) return;
+    try { btn.onclick = null; btn.removeAttribute('onclick'); } catch(_){}
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', smartelPrint, { once: false });
+  }
+
+  window.onPrintPDF = smartelPrint;
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', rebindPrintButton, { once: true });
+  } else {
+    rebindPrintButton();
+  }
+})();
+</script>
+
 </body>
 </html>
