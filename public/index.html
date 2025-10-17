@@ -1699,5 +1699,56 @@ window.addEventListener('DOMContentLoaded', () => {
 <script src="./smartel_transport_map.js"></script>
 <script src="./smartel_pdf_host_patch.js"></script>
 <script src="./smartel_pdf_bind_fix_v3.js"></script>
+<script>window.__SMARTEL_ABS_ENDPOINT='https://smartel.netlify.app/.netlify/functions/generate_pdf';</script>
+<script>
+(function(){
+  'use strict';
+  // 1) fetch/XHR가 상대경로(./ 또는 /로 시작)로 오면 Netlify 절대경로로 바꿔치기
+  var ABS = window.__SMARTEL_ABS_ENDPOINT;
+  if (!ABS) return;
+
+  function abs(url){
+    try{
+      var u = new URL(url, location.href);
+      if (u.pathname.indexOf('/.netlify/functions/')===0) return ABS + (u.search||'');
+      return url;
+    }catch(_){ return url; }
+  }
+  var _fetch = window.fetch;
+  window.fetch = function(input, init){
+    try{
+      if (typeof input==='string'){ input = abs(input); }
+      else if (input && typeof input.url==='string'){
+        var nu = abs(input.url); if (nu!==input.url) input = new Request(nu, input);
+      }
+    }catch(_){}
+    return _fetch.call(this, input, init);
+  };
+  var _open = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(m, url){
+    try{ url = abs(url); }catch(_){}
+    var a = Array.prototype.slice.call(arguments); a[1]=url;
+    return _open.apply(this, a);
+  };
+
+  // 2) 페이지에 generatePDFBlob이 있다면, 우리가 지정한 절대 URL을 강제로 쓰게 래핑
+  var REL = '/.netlify/functions/generate_pdf';
+  if (typeof window.generatePDFBlob==='function'){
+    var orig = window.generatePDFBlob;
+    window.generatePDFBlob = async function(payload){
+      try{
+        var u = ABS; // 무조건 절대경로 사용
+        var res = await fetch(u, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload||{})});
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        return await res.blob();
+      }catch(e){
+        // 실패 시 원본 경로(상대/절대)로도 한 번 더 시도
+        try{ return await orig.apply(this, arguments); }catch(_){}
+        throw e;
+      }
+    };
+  }
+})();
+</script>
 </body>
 </html>
