@@ -426,7 +426,7 @@ async function onPrintPDF(e){
   window.addEventListener("afterprint",function(){ setTimeout(function(){ window.close(); }, 400); });
 <\/script>
 </script>
-</body></html>`;
+</body></html>`);
     w.document.close();
     setTimeout(()=>URL.revokeObjectURL(url), 600000);
   }catch(e){ alert('PDF 생성 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.'); console.error(e); }
@@ -1324,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', function(){
         window.addEventListener('afterprint', () => setTimeout(()=>window.close(), 400));
       <\/script>
     <\/script>
-</body></html>`;
+</body></html>`);
 w.document.close();
 setTimeout(()=>URL.revokeObjectURL(url), 600000);
 });
