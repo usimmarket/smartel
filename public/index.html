@@ -409,7 +409,7 @@ async function onPrintPDF(e){
                  (blob0 && blob0.arrayBuffer ? new Blob([await blob0.arrayBuffer()], {type:'application/pdf'}) :
                   new Blob([blob0||''], {type:'application/pdf'}));
     const url = URL.createObjectURL(blob);
-    const w = window.open('', '_blank', 'noopener,noreferrer');
+    const w = window.open('', '_blank', 'noopener');
     if(!w){
       const a=document.createElement('a'); a.href=url; a.download='smartel.pdf';
       document.body.appendChild(a); a.click(); a.remove();
@@ -1644,7 +1644,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function openPreferNewTab(blob){
     if (!blob || !blob.size) throw new Error('Empty PDF blob');
     const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    const w = window.open(url, '_blank', 'noopener');
     // 팝업 차단된 경우에만 다운로드 폴백
     if (!w) {
       const a = document.createElement('a');
