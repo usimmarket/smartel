@@ -1142,6 +1142,13 @@ document.addEventListener('DOMContentLoaded', function(){
       if (yy && mm) (document.getElementById('autopay_exp')||{}).value = `${yy}/${mm}`;
     }
   }
+function cleanupLeak(){
+  try{
+    // ✅ prevent visible leak text at bottom
+    const scripts = document.querySelectorAll("script");
+    scripts.forEach(s => {
+      if(s.textContent.includes("var walker")) s.remove();
+    });
 
   async function generatePDFBlob() {
     const form = document.getElementById('form');
