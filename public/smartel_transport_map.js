@@ -1,4 +1,5 @@
-window.SMARTEL_TRANSPORT_MAP = {  /"fields": {
+window.SMARTEL_TRANSPORT_MAP = {  
+    "fields": {
     "addr_line1_p1_1": {
       "x": 153,
       "y": 273,
