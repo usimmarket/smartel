@@ -57,6 +57,17 @@ exports.handler = async (event) => {
     }
   }
 
+  // 2-3) 최상위에 래핑된 객체 한 번 더 풀어주기 (예: {form:{...}})
+  if (data && typeof data === 'object') {
+    const topKeys = Object.keys(data);
+    if (topKeys.length === 1 && data[topKeys[0]] && typeof data[topKeys[0]] === 'object') {
+      data = data[topKeys[0]];
+    } else if (data.fields && typeof data.fields === 'object') {
+      // 흔한 패턴: { fields: { addr_line1: ... } }
+      data = data.fields;
+    }
+  }
+
   try {
     const templatePath = path.join(__dirname, 'assets', 'template.pdf');
     const pdfBytes = fs.readFileSync(templatePath);
@@ -132,11 +143,9 @@ exports.handler = async (event) => {
 
       const current = data[fieldName];
 
-      // optKey에 값이 들어있으면 (join_type:new) → 그 값과 일치할 때만 체크
       if (matchValue) {
         if (current !== matchValue) return;
       } else {
-        // 값이 없으면, 해당 필드가 비어있지 않을 때만 찍어준다.
         if (current == null || current === '') return;
       }
 
@@ -177,17 +186,18 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 6) 디버그: data가 비어 있으면 표시 ------------------------------
-    if (!data || Object.keys(data).length === 0) {
-      const page0 = pages[0];
-      page0.drawText('DEBUG: NO DATA', {
-        x: 20,
-        y: 810,
-        size: 10,
-        font,
-        color: rgb(1, 0, 0),
-      });
-    }
+    // ---- 6) 디버그: 실제 들어온 키들을 1페이지 위쪽에 찍어보기 ----------
+    const page0 = pages[0];
+    const keysStr = data && typeof data === 'object'
+      ? Object.keys(data).slice(0, 8).join(', ')
+      : '(no-keys)';
+    page0.drawText(`DEBUG keys: ${keysStr}`, {
+      x: 20,
+      y: 820,
+      size: 8,
+      font,
+      color: rgb(0, 0, 1),
+    });
 
     // ---- 7) PDF 저장 & 반환 -----------------------------------------------
     const out = await pdfDoc.save();
