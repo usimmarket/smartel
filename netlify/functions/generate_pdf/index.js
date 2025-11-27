@@ -89,43 +89,7 @@ exports.handler = async (event) => {
     const pages = pdfDoc.getPages();
     const black = rgb(0, 0, 0);
 
-    // ---- 3) 디버그: 넘어온 키 & plan/price/group 값 찍기 ----------------
-    const page0 = pages[0];
-
-    const keysStr = data && typeof data === 'object'
-      ? Object.keys(data).slice(0, 8).join(', ')
-      : '(no-keys)';
-
-    // 어떤 키들이 왔는지
-    page0.drawText(`DEBUG keys: ${keysStr}`, {
-      x: 20,
-      y: 820,
-      size: 8,
-      font,
-      color: rgb(0, 0, 1),
-    });
-
-    // plan / plan_price / smartel_group 실제 값
-    const dbgMsg = `VAL plan=${data.plan || ''}, price=${data.plan_price || ''}, group=${data.smartel_group || ''}`;
-    page0.drawText(dbgMsg, {
-      x: 20,
-      y: 808,
-      size: 9,
-      font,
-      color: rgb(1, 0, 0),
-    });
-    // ★ 테스트: 요금제(plan)를 디버그 줄 바로 아래에 크게 찍어보기
-    if (data.plan) {
-      page0.drawText(`PLAN: ${data.plan}`, {
-        x: 20,
-        y: 790,   // 디버그 두 줄 바로 아래
-        size: 12,
-        font,
-        color: black,
-      });
-    }    
-
-    // ---- 4) 일반 텍스트 필드 출력 (fields) --------------------------------
+    // ---- 3) 일반 텍스트 필드 출력 (fields) --------------------------------
     const fields = MAP.fields || {};
     Object.keys(fields).forEach((key) => {
       const cfg = fields[key];
@@ -161,7 +125,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 5) 체크박스/라디오(vmap) 출력 -----------------------------------
+    // ---- 4) 체크박스/라디오(vmap) 출력 -----------------------------------
     //  - optKey 예: "join_type:new", "gender_cb:domestic"
     const vmap = MAP.vmap || {};
     Object.keys(vmap).forEach((optKey) => {
@@ -176,11 +140,9 @@ exports.handler = async (event) => {
 
       const current = data[fieldName];
 
-      // optKey에 값이 있을 때 → 그 값과 같을 때만 체크
       if (matchValue) {
         if (current !== matchValue) return;
       } else {
-        // optKey에 값이 없으면, 필드가 비어있지 않을 때만 체크
         if (current == null || current === '') return;
       }
 
@@ -199,7 +161,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 6) 고정 라벨(fixed_flags) 출력 -----------------------------------
+    // ---- 5) 고정 라벨(fixed_flags) 출력 -----------------------------------
     const fixedFlags = MAP.fixed_flags || {};
     Object.keys(fixedFlags).forEach((flagName) => {
       const boxes = fixedFlags[flagName];
@@ -221,7 +183,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 7) PDF 저장 & 반환 -----------------------------------------------
+    // ---- 6) PDF 저장 & 반환 -----------------------------------------------
     const out = await pdfDoc.save();
 
     return {
