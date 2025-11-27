@@ -1,5 +1,5 @@
-window.SMARTEL_TRANSPORT_MAP = {  
-    "fields": {
+{
+  "fields": {
     "addr_line1_p1_1": {
       "x": 153,
       "y": 273,
@@ -263,8 +263,3 @@ window.SMARTEL_TRANSPORT_MAP = {
     "intl_roaming_block": []
   }
 }
-  "meta": { ... },
-  "fields": { ... },
-  "vmap": { ... },
-  "fixed_flags": { ... }
-};
