@@ -114,6 +114,16 @@ exports.handler = async (event) => {
       font,
       color: rgb(1, 0, 0),
     });
+    // ★ 테스트: 요금제(plan)를 디버그 줄 바로 아래에 크게 찍어보기
+    if (data.plan) {
+      page0.drawText(`PLAN: ${data.plan}`, {
+        x: 20,
+        y: 790,   // 디버그 두 줄 바로 아래
+        size: 12,
+        font,
+        color: black,
+      });
+    }    
 
     // ---- 4) 일반 텍스트 필드 출력 (fields) --------------------------------
     const fields = MAP.fields || {};
