@@ -30,11 +30,31 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  // ---- 2) 요청 데이터 파싱 (JSON + form-urlencoded 둘 다 지원) ----------
   let data = {};
-  try {
-    data = JSON.parse(event.body || '{}');
-  } catch (_) {
-    data = {};
+  const bodyRaw = event.body || '';
+
+  // 2-1) 먼저 JSON 시도
+  if (bodyRaw) {
+    try {
+      data = JSON.parse(bodyRaw);
+    } catch (e) {
+      data = {};
+    }
+  }
+
+  // 2-2) JSON 파싱 실패 / 비어있을 경우, form-urlencoded 파싱 시도
+  if ((!data || Object.keys(data).length === 0) && bodyRaw) {
+    try {
+      const params = new URLSearchParams(bodyRaw);
+      const obj = {};
+      params.forEach((value, key) => {
+        obj[key] = value;
+      });
+      data = obj;
+    } catch (e) {
+      console.warn('[generate_pdf] failed to parse body as form-urlencoded:', e && e.message);
+    }
   }
 
   try {
@@ -61,7 +81,7 @@ exports.handler = async (event) => {
     const pages = pdfDoc.getPages();
     const black = rgb(0, 0, 0);
 
-    // ---- 2) 일반 텍스트 필드 출력 (fields) --------------------------------
+    // ---- 3) 일반 텍스트 필드 출력 (fields) --------------------------------
     const fields = MAP.fields || {};
     Object.keys(fields).forEach((key) => {
       const cfg = fields[key];
@@ -97,7 +117,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 3) 체크박스/라디오(vmap) 출력 -----------------------------------
+    // ---- 4) 체크박스/라디오(vmap) 출력 -----------------------------------
     //  - optKey 형식 예: "join_type:new", "gender_cb:domestic"
     const vmap = MAP.vmap || {};
     Object.keys(vmap).forEach((optKey) => {
@@ -135,7 +155,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 4) 고정 라벨(fixed_flags) 출력 -----------------------------------
+    // ---- 5) 고정 라벨(fixed_flags) 출력 -----------------------------------
     const fixedFlags = MAP.fixed_flags || {};
     Object.keys(fixedFlags).forEach((flagName) => {
       const boxes = fixedFlags[flagName];
@@ -157,7 +177,19 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 5) PDF 저장 & 반환 ----------------------------------------------
+    // ---- 6) 디버그: data가 비어 있으면 표시 ------------------------------
+    if (!data || Object.keys(data).length === 0) {
+      const page0 = pages[0];
+      page0.drawText('DEBUG: NO DATA', {
+        x: 20,
+        y: 810,
+        size: 10,
+        font,
+        color: rgb(1, 0, 0),
+      });
+    }
+
+    // ---- 7) PDF 저장 & 반환 -----------------------------------------------
     const out = await pdfDoc.save();
 
     return {
