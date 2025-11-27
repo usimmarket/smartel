@@ -1,12 +1,30 @@
 const fs = require('fs');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+
 let fontkit;
-try { fontkit = require('@pdf-lib/fontkit'); } catch (_) {}
+try {
+  fontkit = require('@pdf-lib/fontkit');
+} catch (_) {
+  fontkit = null;
+}
 
-// ★ 좌표 매핑 JSON 불러오기
-const MAP = require('./assets/smartel_transport_map.json');
+// ---- 1) 좌표 매핑 JSON 로드 ---------------------------------------------
+let MAP = { fields: {}, vmap: {}, fixed_flags: {} };
 
+try {
+  const mapPath = path.join(__dirname, 'assets', 'smartel_transport_map.json');
+  if (fs.existsSync(mapPath)) {
+    const raw = fs.readFileSync(mapPath, 'utf8');
+    MAP = JSON.parse(raw);
+  } else {
+    console.warn('[generate_pdf] smartel_transport_map.json not found in assets/');
+  }
+} catch (e) {
+  console.warn('[generate_pdf] failed to load smartel_transport_map.json:', e && e.message);
+}
+
+// -------------------------------------------------------------------------
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -24,8 +42,10 @@ exports.handler = async (event) => {
     const pdfBytes = fs.readFileSync(templatePath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
 
-    // 폰트 설정
+    // 기본 폰트: 헬베티카
     let font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // NotoSansKR 폰트가 있으면 등록 (한글용)
     if (fontkit) {
       pdfDoc.registerFontkit(fontkit);
       try {
@@ -41,11 +61,12 @@ exports.handler = async (event) => {
     const pages = pdfDoc.getPages();
     const black = rgb(0, 0, 0);
 
-    // 1) 일반 텍스트 필드 출력
+    // ---- 2) 일반 텍스트 필드 출력 (fields) --------------------------------
     const fields = MAP.fields || {};
     Object.keys(fields).forEach((key) => {
       const cfg = fields[key];
       if (!cfg) return;
+
       const pageIndex = (cfg.page || 1) - 1;
       const page = pages[pageIndex];
       if (!page) return;
@@ -76,37 +97,45 @@ exports.handler = async (event) => {
       });
     });
 
-    // 2) 라디오/체크박스 (vmap) 출력
-    //  - 예: vmap.gender_cb.domestic / vmap.gender_cb.foreigner
+    // ---- 3) 체크박스/라디오(vmap) 출력 -----------------------------------
+    //  - optKey 형식 예: "join_type:new", "gender_cb:domestic"
     const vmap = MAP.vmap || {};
-    Object.keys(vmap).forEach((fieldName) => {
-      const groupCfg = vmap[fieldName];
-      if (!groupCfg) return;
+    Object.keys(vmap).forEach((optKey) => {
+      const cfg = vmap[optKey];
+      if (!cfg) return;
 
-      const value = data[fieldName]; // index.html 의 name="gender_cb" 등과 동일해야 함
-      if (!value) return;
+      const parts = String(optKey).split(':');
+      const fieldName = (parts[0] || '').trim();
+      const matchValue = (parts[1] || '').trim();
 
-      const optCfg = groupCfg[value];
-      if (!optCfg) return;
+      if (!fieldName) return;
 
-      const pageIndex = (optCfg.page || 1) - 1;
+      const current = data[fieldName];
+
+      // optKey에 값이 들어있으면 (join_type:new) → 그 값과 일치할 때만 체크
+      if (matchValue) {
+        if (current !== matchValue) return;
+      } else {
+        // 값이 없으면, 해당 필드가 비어있지 않을 때만 찍어준다.
+        if (current == null || current === '') return;
+      }
+
+      const pageIndex = (cfg.page || 1) - 1;
       const page = pages[pageIndex];
       if (!page) return;
 
-      const size = optCfg.size || 11;
+      const size = cfg.size || 11;
 
-      // ■ 또는 ✓ 등 체크 모양
       page.drawText('■', {
-        x: optCfg.x,
-        y: optCfg.y,
+        x: cfg.x,
+        y: cfg.y,
         size,
         font,
         color: black,
       });
     });
 
-    // 3) 항상 체크되는 고정 플래그 (fixed_flags)
-    //  - 예: intl_roaming_block 등
+    // ---- 4) 고정 라벨(fixed_flags) 출력 -----------------------------------
     const fixedFlags = MAP.fixed_flags || {};
     Object.keys(fixedFlags).forEach((flagName) => {
       const boxes = fixedFlags[flagName];
@@ -117,8 +146,7 @@ exports.handler = async (event) => {
         const page = pages[pageIndex];
         if (!page) return;
 
-        const size = box.size || 11;
-
+        const size = box.size || 10;
         page.drawText('■', {
           x: box.x,
           y: box.y,
@@ -129,7 +157,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // PDF 저장
+    // ---- 5) PDF 저장 & 반환 ----------------------------------------------
     const out = await pdfDoc.save();
 
     return {
@@ -142,6 +170,7 @@ exports.handler = async (event) => {
       isBase64Encoded: true,
     };
   } catch (e) {
+    console.error('[generate_pdf] ERROR:', e);
     return {
       statusCode: 500,
       body: 'PDF ERROR: ' + (e && e.message ? e.message : String(e)),
