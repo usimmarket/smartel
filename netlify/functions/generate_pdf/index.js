@@ -34,7 +34,7 @@ exports.handler = async (event) => {
   let data = {};
   const bodyRaw = event.body || '';
 
-  // 2-1) 먼저 JSON 시도
+  // 2-1) JSON 먼저 시도
   if (bodyRaw) {
     try {
       data = JSON.parse(bodyRaw);
@@ -43,7 +43,7 @@ exports.handler = async (event) => {
     }
   }
 
-  // 2-2) JSON 파싱 실패 / 비어있을 경우, form-urlencoded 파싱 시도
+  // 2-2) JSON 실패 / 비어 있으면, form-urlencoded 파싱 시도
   if ((!data || Object.keys(data).length === 0) && bodyRaw) {
     try {
       const params = new URLSearchParams(bodyRaw);
@@ -57,13 +57,12 @@ exports.handler = async (event) => {
     }
   }
 
-  // 2-3) 최상위에 래핑된 객체 한 번 더 풀어주기 (예: {form:{...}})
+  // 2-3) 최상단에 한 번 더 싸여 있는 경우 풀어주기 (예: {form:{...}} 또는 {fields:{...}})
   if (data && typeof data === 'object') {
     const topKeys = Object.keys(data);
     if (topKeys.length === 1 && data[topKeys[0]] && typeof data[topKeys[0]] === 'object') {
       data = data[topKeys[0]];
     } else if (data.fields && typeof data.fields === 'object') {
-      // 흔한 패턴: { fields: { addr_line1: ... } }
       data = data.fields;
     }
   }
@@ -73,10 +72,8 @@ exports.handler = async (event) => {
     const pdfBytes = fs.readFileSync(templatePath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
 
-    // 기본 폰트: 헬베티카
+    // 폰트 설정
     let font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    // NotoSansKR 폰트가 있으면 등록 (한글용)
     if (fontkit) {
       pdfDoc.registerFontkit(fontkit);
       try {
@@ -92,7 +89,33 @@ exports.handler = async (event) => {
     const pages = pdfDoc.getPages();
     const black = rgb(0, 0, 0);
 
-    // ---- 3) 일반 텍스트 필드 출력 (fields) --------------------------------
+    // ---- 3) 디버그: 넘어온 키 & plan/price/group 값 찍기 ----------------
+    const page0 = pages[0];
+
+    const keysStr = data && typeof data === 'object'
+      ? Object.keys(data).slice(0, 8).join(', ')
+      : '(no-keys)';
+
+    // 어떤 키들이 왔는지
+    page0.drawText(`DEBUG keys: ${keysStr}`, {
+      x: 20,
+      y: 820,
+      size: 8,
+      font,
+      color: rgb(0, 0, 1),
+    });
+
+    // plan / plan_price / smartel_group 실제 값
+    const dbgMsg = `VAL plan=${data.plan || ''}, price=${data.plan_price || ''}, group=${data.smartel_group || ''}`;
+    page0.drawText(dbgMsg, {
+      x: 20,
+      y: 808,
+      size: 9,
+      font,
+      color: rgb(1, 0, 0),
+    });
+
+    // ---- 4) 일반 텍스트 필드 출력 (fields) --------------------------------
     const fields = MAP.fields || {};
     Object.keys(fields).forEach((key) => {
       const cfg = fields[key];
@@ -128,8 +151,8 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 4) 체크박스/라디오(vmap) 출력 -----------------------------------
-    //  - optKey 형식 예: "join_type:new", "gender_cb:domestic"
+    // ---- 5) 체크박스/라디오(vmap) 출력 -----------------------------------
+    //  - optKey 예: "join_type:new", "gender_cb:domestic"
     const vmap = MAP.vmap || {};
     Object.keys(vmap).forEach((optKey) => {
       const cfg = vmap[optKey];
@@ -143,9 +166,11 @@ exports.handler = async (event) => {
 
       const current = data[fieldName];
 
+      // optKey에 값이 있을 때 → 그 값과 같을 때만 체크
       if (matchValue) {
         if (current !== matchValue) return;
       } else {
+        // optKey에 값이 없으면, 필드가 비어있지 않을 때만 체크
         if (current == null || current === '') return;
       }
 
@@ -164,7 +189,7 @@ exports.handler = async (event) => {
       });
     });
 
-    // ---- 5) 고정 라벨(fixed_flags) 출력 -----------------------------------
+    // ---- 6) 고정 라벨(fixed_flags) 출력 -----------------------------------
     const fixedFlags = MAP.fixed_flags || {};
     Object.keys(fixedFlags).forEach((flagName) => {
       const boxes = fixedFlags[flagName];
@@ -184,19 +209,6 @@ exports.handler = async (event) => {
           color: black,
         });
       });
-    });
-
-    // ---- 6) 디버그: 실제 들어온 키들을 1페이지 위쪽에 찍어보기 ----------
-    const page0 = pages[0];
-    const keysStr = data && typeof data === 'object'
-      ? Object.keys(data).slice(0, 8).join(', ')
-      : '(no-keys)';
-    page0.drawText(`DEBUG keys: ${keysStr}`, {
-      x: 20,
-      y: 820,
-      size: 8,
-      font,
-      color: rgb(0, 0, 1),
     });
 
     // ---- 7) PDF 저장 & 반환 -----------------------------------------------
