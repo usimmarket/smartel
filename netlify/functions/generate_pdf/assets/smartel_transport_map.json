@@ -2,7 +2,7 @@
   "fields": {
     "subscriber_phone_p1_1": {
       "x": 133,
-      "y": 278,
+      "y": 277,
       "size": 11,
       "page": 1,
       "source": [
@@ -21,7 +21,7 @@
       "type": "text"
     },
     " autopay_birth_p1_3": {
-      "x": 431,
+      "x": 440,
       "y": 241,
       "size": 11,
       "page": 1,
@@ -41,8 +41,8 @@
       "type": "text"
     },
     "subscriber_name_p1_5": {
-      "x": 132,
-      "y": 241,
+      "x": 131,
+      "y": 240,
       "size": 11,
       "page": 1,
       "source": [
@@ -51,8 +51,8 @@
       "type": "text"
     },
     "subscriber_name_p3_6": {
-      "x": 331,
-      "y": 626,
+      "x": 334,
+      "y": 622,
       "size": 11,
       "page": 3,
       "source": [
@@ -72,7 +72,7 @@
     },
     "card_exp_month_p1_8": {
       "x": 438,
-      "y": 321,
+      "y": 324,
       "size": 11,
       "page": 1,
       "source": [
@@ -81,8 +81,8 @@
       "type": "text"
     },
     "subscriber_name_p1_9": {
-      "x": 348,
-      "y": 749,
+      "x": 346,
+      "y": 752,
       "size": 11,
       "page": 1,
       "source": [
@@ -91,7 +91,7 @@
       "type": "text"
     },
     "subscriber_name_p1_10": {
-      "x": 131,
+      "x": 191,
       "y": 295,
       "size": 11,
       "page": 1,
@@ -101,7 +101,7 @@
       "type": "text"
     },
     "subscriber_name_p2_11": {
-      "x": 331,
+      "x": 334,
       "y": 160,
       "size": 11,
       "page": 2,
@@ -111,7 +111,7 @@
       "type": "text"
     },
     "subscriber_name_p2_12": {
-      "x": 331,
+      "x": 334,
       "y": 440,
       "size": 11,
       "page": 2,
@@ -121,8 +121,8 @@
       "type": "text"
     },
     "subscriber_name_p2_13": {
-      "x": 331,
-      "y": 798,
+      "x": 334,
+      "y": 794,
       "size": 11,
       "page": 2,
       "source": [
@@ -131,8 +131,8 @@
       "type": "text"
     },
     "subscriber_name_p3_14": {
-      "x": 331,
-      "y": 440,
+      "x": 334,
+      "y": 435,
       "size": 11,
       "page": 3,
       "source": [
@@ -142,7 +142,7 @@
     },
     "addr_line1_p1_15": {
       "x": 130,
-      "y": 257,
+      "y": 259,
       "size": 11,
       "page": 1,
       "source": [
@@ -161,8 +161,8 @@
       "type": "text"
     },
     "autopay_number_p1_17": {
-      "x": 201,
-      "y": 327,
+      "x": 194,
+      "y": 325,
       "size": 11,
       "page": 1,
       "source": [
@@ -171,7 +171,7 @@
       "type": "text"
     },
     "sim_serial_p1_18": {
-      "x": 145,
+      "x": 139,
       "y": 384,
       "size": 11,
       "page": 1,
@@ -181,8 +181,8 @@
       "type": "text"
     },
     "subscriber_name_p1_19": {
-      "x": 356,
-      "y": 215,
+      "x": 352,
+      "y": 216,
       "size": 11,
       "page": 1,
       "source": [
@@ -211,8 +211,8 @@
       "type": "text"
     },
     "port_number_p1_22": {
-      "x": 145,
-      "y": 408,
+      "x": 171,
+      "y": 405,
       "size": 11,
       "page": 1,
       "source": [
@@ -231,7 +231,7 @@
       "type": "text"
     },
     "autopay_org_p1_24": {
-      "x": 191,
+      "x": 182,
       "y": 310,
       "size": 11,
       "page": 1,
@@ -241,7 +241,7 @@
       "type": "text"
     },
     "subscriber_name_p1_25": {
-      "x": 360,
+      "x": 352,
       "y": 343,
       "size": 11,
       "page": 1,
@@ -251,8 +251,8 @@
       "type": "text"
     },
     "card_exp_year_p1_26": {
-      "x": 405,
-      "y": 321,
+      "x": 408,
+      "y": 324,
       "size": 11,
       "page": 1,
       "source": [
@@ -262,8 +262,8 @@
     },
     "plan_price_p1_27": {
       "x": 502,
-      "y": 143,
-      "size": 13,
+      "y": 140,
+      "size": 14,
       "page": 1,
       "source": [
         "plan_price"
@@ -344,7 +344,7 @@
   "vmap": {
     "smartel_group:lg": {
       "x": 467,
-      "y": 56,
+      "y": 50,
       "size": 13,
       "page": 1
     },
@@ -355,8 +355,8 @@
       "page": 1
     },
     "join_type:port": {
-      "x": 69,
-      "y": 62,
+      "x": 73,
+      "y": 64,
       "size": 11,
       "page": 1
     },
@@ -409,7 +409,7 @@
       "page": 1
     },
     "smartel_group:sk": {
-      "x": 398,
+      "x": 395,
       "y": 50,
       "size": 13,
       "page": 1
