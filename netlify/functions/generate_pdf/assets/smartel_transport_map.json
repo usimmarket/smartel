@@ -1,8 +1,8 @@
 {
   "fields": {
     "addr_line1_p1_1": {
-      "x": 153,
-      "y": 10.37,
+      "x": 154,
+      "y": 292,
       "size": 11,
       "page": 1,
       "source": [
@@ -12,75 +12,69 @@
     }
   },
   "vmap": {
-    "smartel_group:sk": {
-      "x": 425.2,
-      "y": -1131.03,
-      "size": 11,
-      "page": 1
-    },
     "smartel_group:lg": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "join_type:new": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "join_type:port": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "gender_cb:domestic": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "gender_cb:foreigner": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "autopay_method:bank": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "autopay_method:card": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "prev_carrier:SK": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "prev_carrier:KT": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "prev_carrier:LG U+": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     },
     "prev_carrier:MVNO": {
       "x": 425.2,
-      "y": -1131.03,
+      "y": -1697.95,
       "size": 11,
       "page": 1
     }
