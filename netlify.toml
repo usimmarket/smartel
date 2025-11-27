@@ -9,3 +9,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
+
+[functions."generate_pdf"]
+  included_files = ["netlify/functions/generate_pdf/assets/*"]
