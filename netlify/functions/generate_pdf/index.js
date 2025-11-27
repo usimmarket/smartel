@@ -34,7 +34,6 @@ exports.handler = async (event) => {
   let data = {};
   const bodyRaw = event.body || '';
 
-  // 2-1) JSON 먼저 시도
   if (bodyRaw) {
     try {
       data = JSON.parse(bodyRaw);
@@ -43,7 +42,6 @@ exports.handler = async (event) => {
     }
   }
 
-  // 2-2) JSON 실패 / 비어 있으면, form-urlencoded 파싱 시도
   if ((!data || Object.keys(data).length === 0) && bodyRaw) {
     try {
       const params = new URLSearchParams(bodyRaw);
@@ -57,7 +55,6 @@ exports.handler = async (event) => {
     }
   }
 
-  // 2-3) 최상단에 한 번 더 싸여 있는 경우 풀어주기 (예: {form:{...}} 또는 {fields:{...}})
   if (data && typeof data === 'object') {
     const topKeys = Object.keys(data);
     if (topKeys.length === 1 && data[topKeys[0]] && typeof data[topKeys[0]] === 'object') {
@@ -116,9 +113,13 @@ exports.handler = async (event) => {
 
       if (!value) return;
 
+      // ★ y좌표를 위→아래 기준에서 아래→위 기준으로 변환
+      const { height } = page.getSize();
+      const drawY = height - cfg.y;
+
       page.drawText(value, {
         x: cfg.x,
-        y: cfg.y,
+        y: drawY,
         size: cfg.size || 10,
         font,
         color: black,
@@ -126,7 +127,6 @@ exports.handler = async (event) => {
     });
 
     // ---- 4) 체크박스/라디오(vmap) 출력 -----------------------------------
-    //  - optKey 예: "join_type:new", "gender_cb:domestic"
     const vmap = MAP.vmap || {};
     Object.keys(vmap).forEach((optKey) => {
       const cfg = vmap[optKey];
@@ -135,7 +135,6 @@ exports.handler = async (event) => {
       const parts = String(optKey).split(':');
       const fieldName = (parts[0] || '').trim();
       const matchValue = (parts[1] || '').trim();
-
       if (!fieldName) return;
 
       const current = data[fieldName];
@@ -151,10 +150,12 @@ exports.handler = async (event) => {
       if (!page) return;
 
       const size = cfg.size || 11;
+      const { height } = page.getSize();
+      const drawY = height - cfg.y;
 
       page.drawText('■', {
         x: cfg.x,
-        y: cfg.y,
+        y: drawY,
         size,
         font,
         color: black,
@@ -173,9 +174,12 @@ exports.handler = async (event) => {
         if (!page) return;
 
         const size = box.size || 10;
+        const { height } = page.getSize();
+        const drawY = height - box.y;
+
         page.drawText('■', {
           x: box.x,
-          y: box.y,
+          y: drawY,
           size,
           font,
           color: black,
