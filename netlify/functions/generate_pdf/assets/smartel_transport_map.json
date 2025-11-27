@@ -2,7 +2,7 @@
   "fields": {
     "subscriber_phone_p1_1": {
       "x": 133,
-      "y": 274,
+      "y": 278,
       "size": 11,
       "page": 1,
       "source": [
@@ -21,8 +21,8 @@
       "type": "text"
     },
     " autopay_birth_p1_3": {
-      "x": 445,
-      "y": 236,
+      "x": 431,
+      "y": 241,
       "size": 11,
       "page": 1,
       "source": [
@@ -32,7 +32,7 @@
     },
     "autopay_birth_p1_4": {
       "x": 443,
-      "y": 293,
+      "y": 295,
       "size": 11,
       "page": 1,
       "source": [
@@ -41,8 +41,8 @@
       "type": "text"
     },
     "subscriber_name_p1_5": {
-      "x": 188,
-      "y": 235,
+      "x": 132,
+      "y": 241,
       "size": 11,
       "page": 1,
       "source": [
@@ -51,8 +51,8 @@
       "type": "text"
     },
     "subscriber_name_p3_6": {
-      "x": 364,
-      "y": 603,
+      "x": 331,
+      "y": 626,
       "size": 11,
       "page": 3,
       "source": [
@@ -71,7 +71,7 @@
       "type": "text"
     },
     "card_exp_month_p1_8": {
-      "x": 443,
+      "x": 438,
       "y": 321,
       "size": 11,
       "page": 1,
@@ -81,8 +81,8 @@
       "type": "text"
     },
     "subscriber_name_p1_9": {
-      "x": 366,
-      "y": 740,
+      "x": 348,
+      "y": 749,
       "size": 11,
       "page": 1,
       "source": [
@@ -91,7 +91,7 @@
       "type": "text"
     },
     "subscriber_name_p1_10": {
-      "x": 149,
+      "x": 131,
       "y": 295,
       "size": 11,
       "page": 1,
@@ -101,8 +101,8 @@
       "type": "text"
     },
     "subscriber_name_p2_11": {
-      "x": 364,
-      "y": 151,
+      "x": 331,
+      "y": 160,
       "size": 11,
       "page": 2,
       "source": [
@@ -111,8 +111,8 @@
       "type": "text"
     },
     "subscriber_name_p2_12": {
-      "x": 364,
-      "y": 430,
+      "x": 331,
+      "y": 440,
       "size": 11,
       "page": 2,
       "source": [
@@ -121,8 +121,8 @@
       "type": "text"
     },
     "subscriber_name_p2_13": {
-      "x": 364,
-      "y": 784,
+      "x": 331,
+      "y": 798,
       "size": 11,
       "page": 2,
       "source": [
@@ -131,8 +131,8 @@
       "type": "text"
     },
     "subscriber_name_p3_14": {
-      "x": 364,
-      "y": 416,
+      "x": 331,
+      "y": 440,
       "size": 11,
       "page": 3,
       "source": [
@@ -141,8 +141,8 @@
       "type": "text"
     },
     "addr_line1_p1_15": {
-      "x": 132,
-      "y": 254,
+      "x": 130,
+      "y": 257,
       "size": 11,
       "page": 1,
       "source": [
@@ -161,8 +161,8 @@
       "type": "text"
     },
     "autopay_number_p1_17": {
-      "x": 145,
-      "y": 337,
+      "x": 201,
+      "y": 327,
       "size": 11,
       "page": 1,
       "source": [
@@ -172,7 +172,7 @@
     },
     "sim_serial_p1_18": {
       "x": 145,
-      "y": 376,
+      "y": 384,
       "size": 11,
       "page": 1,
       "source": [
@@ -181,8 +181,8 @@
       "type": "text"
     },
     "subscriber_name_p1_19": {
-      "x": 366,
-      "y": 210,
+      "x": 356,
+      "y": 215,
       "size": 11,
       "page": 1,
       "source": [
@@ -201,8 +201,8 @@
       "type": "text"
     },
     "plan_price_p1_21": {
-      "x": 318,
-      "y": 195,
+      "x": 339,
+      "y": 194,
       "size": 11,
       "page": 1,
       "source": [
@@ -212,7 +212,7 @@
     },
     "port_number_p1_22": {
       "x": 145,
-      "y": 395,
+      "y": 408,
       "size": 11,
       "page": 1,
       "source": [
@@ -222,7 +222,7 @@
     },
     "wish4_p1_23": {
       "x": 145,
-      "y": 360,
+      "y": 365,
       "size": 11,
       "page": 1,
       "source": [
@@ -231,8 +231,8 @@
       "type": "text"
     },
     "autopay_org_p1_24": {
-      "x": 145,
-      "y": 313,
+      "x": 191,
+      "y": 310,
       "size": 11,
       "page": 1,
       "source": [
@@ -241,8 +241,8 @@
       "type": "text"
     },
     "subscriber_name_p1_25": {
-      "x": 366,
-      "y": 340,
+      "x": 360,
+      "y": 343,
       "size": 11,
       "page": 1,
       "source": [
@@ -251,7 +251,7 @@
       "type": "text"
     },
     "card_exp_year_p1_26": {
-      "x": 418,
+      "x": 405,
       "y": 321,
       "size": 11,
       "page": 1,
@@ -261,8 +261,8 @@
       "type": "text"
     },
     "plan_price_p1_27": {
-      "x": 426,
-      "y": 140,
+      "x": 502,
+      "y": 143,
       "size": 13,
       "page": 1,
       "source": [
@@ -271,8 +271,8 @@
       "type": "text"
     },
     "plan_p1_28": {
-      "x": 302,
-      "y": 134,
+      "x": 280,
+      "y": 132,
       "size": 11,
       "page": 1,
       "source": [
@@ -349,8 +349,8 @@
       "page": 1
     },
     "join_type:new": {
-      "x": 46,
-      "y": 62,
+      "x": 36,
+      "y": 66,
       "size": 11,
       "page": 1
     },
@@ -403,14 +403,14 @@
       "page": 1
     },
     "prev_carrier:MVNO": {
-      "x": 490,
+      "x": 494,
       "y": 403,
       "size": 11,
       "page": 1
     },
     "smartel_group:sk": {
-      "x": 418,
-      "y": 56,
+      "x": 398,
+      "y": 50,
       "size": 13,
       "page": 1
     }
