@@ -252,7 +252,73 @@
     }
   },
   "vmap": {
-    "autopay_method": {
+    "smartel_group:sk": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "smartel_group:lg": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "join_type:new": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "join_type:port": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "gender_cb:domestic": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "gender_cb:foreigner": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "autopay_method:bank": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "autopay_method:card": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "prev_carrier:SK": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "prev_carrier:KT": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "prev_carrier:LG U+": {
+      "x": 0,
+      "y": 0,
+      "size": 11,
+      "page": 1
+    },
+    "prev_carrier:MVNO": {
       "x": 0,
       "y": 0,
       "size": 11,
