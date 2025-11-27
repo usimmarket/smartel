@@ -60,13 +60,13 @@
       ],
       "type": "text"
     },
-    "plan_price_p1_7": {
-      "x": 426,
-      "y": 140,
+    "smartel_group:sk_p1_7": {
+      "x": 418,
+      "y": 56,
       "size": 13,
       "page": 1,
       "source": [
-        "plan_price"
+        "smartel_group:sk"
       ],
       "type": "text"
     },
@@ -150,13 +150,13 @@
       ],
       "type": "text"
     },
-    "mvno_name_p1_16": {
-      "x": 522,
+    "prev_carrier:SK_p1_16": {
+      "x": 429,
       "y": 403,
       "size": 11,
       "page": 1,
       "source": [
-        "mvno_name"
+        "prev_carrier:SK"
       ],
       "type": "text"
     },
@@ -190,13 +190,13 @@
       ],
       "type": "text"
     },
-    "plan_p1_20": {
-      "x": 302,
-      "y": 134,
+    "join_type:port_p1_20": {
+      "x": 69,
+      "y": 62,
       "size": 11,
       "page": 1,
       "source": [
-        "plan"
+        "join_type:port"
       ],
       "type": "text"
     },
@@ -257,6 +257,86 @@
       "page": 1,
       "source": [
         "card_exp_year"
+      ],
+      "type": "text"
+    },
+    "plan_price_p1_27": {
+      "x": 426,
+      "y": 140,
+      "size": 13,
+      "page": 1,
+      "source": [
+        "plan_price"
+      ],
+      "type": "text"
+    },
+    "plan_p1_28": {
+      "x": 302,
+      "y": 134,
+      "size": 11,
+      "page": 1,
+      "source": [
+        "plan"
+      ],
+      "type": "text"
+    },
+    "join_type:new_p1_29": {
+      "x": 46,
+      "y": 62,
+      "size": 11,
+      "page": 1,
+      "source": [
+        "join_type:new"
+      ],
+      "type": "text"
+    },
+    "mvno_name_p1_30": {
+      "x": 522,
+      "y": 403,
+      "size": 11,
+      "page": 1,
+      "source": [
+        "mvno_name"
+      ],
+      "type": "text"
+    },
+    "prev_carrier:MVNO_p1_31": {
+      "x": 490,
+      "y": 403,
+      "size": 11,
+      "page": 1,
+      "source": [
+        "prev_carrier:MVNO"
+      ],
+      "type": "text"
+    },
+    "prev_carrier:LG U+_p1_32": {
+      "x": 467,
+      "y": 403,
+      "size": 11,
+      "page": 1,
+      "source": [
+        "prev_carrier:LG U+"
+      ],
+      "type": "text"
+    },
+    "prev_carrier:KT_p1_33": {
+      "x": 445,
+      "y": 403,
+      "size": 11,
+      "page": 1,
+      "source": [
+        "prev_carrier:KT"
+      ],
+      "type": "text"
+    },
+    "smartel_group:lg_p1_34": {
+      "x": 467,
+      "y": 56,
+      "size": 13,
+      "page": 1,
+      "source": [
+        "smartel_group:lg"
       ],
       "type": "text"
     }
