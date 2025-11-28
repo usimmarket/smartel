@@ -211,8 +211,8 @@
       "type": "text"
     },
     "port_number_p1_22": {
-      "x": 171,
-      "y": 405,
+      "x": 136,
+      "y": 403,
       "size": 11,
       "page": 1,
       "source": [
@@ -251,7 +251,7 @@
       "type": "text"
     },
     "card_exp_year_p1_26": {
-      "x": 408,
+      "x": 410,
       "y": 324,
       "size": 11,
       "page": 1,
@@ -291,9 +291,9 @@
       "type": "text"
     },
     "mvno_name_p1_30": {
-      "x": 522,
-      "y": 403,
-      "size": 11,
+      "x": 524,
+      "y": 404,
+      "size": 9,
       "page": 1,
       "source": [
         "mvno_name"
@@ -350,12 +350,12 @@
     },
     "join_type:new": {
       "x": 52,
-      "y": 62,
+      "y": 64,
       "size": 11,
       "page": 1
     },
     "join_type:port": {
-      "x": 73,
+      "x": 75,
       "y": 64,
       "size": 11,
       "page": 1
@@ -385,25 +385,25 @@
       "page": 1
     },
     "prev_carrier:SK": {
-      "x": 429,
+      "x": 402,
       "y": 403,
       "size": 11,
       "page": 1
     },
     "prev_carrier:KT": {
-      "x": 445,
+      "x": 435,
       "y": 403,
       "size": 11,
       "page": 1
     },
     "prev_carrier:LG U+": {
-      "x": 467,
+      "x": 462,
       "y": 403,
       "size": 11,
       "page": 1
     },
     "prev_carrier:MVNO": {
-      "x": 494,
+      "x": 495,
       "y": 403,
       "size": 11,
       "page": 1
