@@ -343,20 +343,20 @@
   },
   "vmap": {
     "smartel_group:lg": {
-      "x": 467,
+      "x": 457,
       "y": 50,
       "size": 13,
       "page": 1
     },
     "join_type:new": {
       "x": 52,
-      "y": 64,
+      "y": 66,
       "size": 11,
       "page": 1
     },
     "join_type:port": {
       "x": 75,
-      "y": 64,
+      "y": 66,
       "size": 11,
       "page": 1
     },
@@ -385,7 +385,7 @@
       "page": 1
     },
     "prev_carrier:SK": {
-      "x": 402,
+      "x": 405,
       "y": 403,
       "size": 11,
       "page": 1
@@ -397,7 +397,7 @@
       "page": 1
     },
     "prev_carrier:LG U+": {
-      "x": 462,
+      "x": 461,
       "y": 403,
       "size": 11,
       "page": 1
