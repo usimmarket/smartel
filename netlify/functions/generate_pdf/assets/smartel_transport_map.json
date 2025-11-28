@@ -1,8 +1,8 @@
 {
   "fields": {
     "subscriber_phone_p1_1": {
-      "x": 133,
-      "y": 279,
+      "x": 132,
+      "y": 278,
       "size": 11,
       "page": 1,
       "source": [
@@ -32,7 +32,7 @@
     },
     "autopay_birth_p1_4": {
       "x": 443,
-      "y": 295,
+      "y": 296,
       "size": 11,
       "page": 1,
       "source": [
@@ -102,7 +102,7 @@
     },
     "subscriber_name_p2_11": {
       "x": 336,
-      "y": 157,
+      "y": 159,
       "size": 11,
       "page": 2,
       "source": [
@@ -161,8 +161,8 @@
       "type": "text"
     },
     "autopay_number_p1_17": {
-      "x": 194,
-      "y": 323,
+      "x": 187,
+      "y": 324,
       "size": 11,
       "page": 1,
       "source": [
@@ -349,8 +349,8 @@
       "page": 1
     },
     "join_type:new": {
-      "x": 57,
-      "y": 64,
+      "x": 52,
+      "y": 62,
       "size": 11,
       "page": 1
     },
@@ -409,7 +409,7 @@
       "page": 1
     },
     "smartel_group:sk": {
-      "x": 389,
+      "x": 390,
       "y": 50,
       "size": 13,
       "page": 1
